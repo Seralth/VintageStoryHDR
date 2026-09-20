@@ -34,7 +34,8 @@ Everything is live and saved to `ModConfig/vshdr.json`.
 | --- | --- | --- |
 | `.hdr` | Status | |
 | `.hdr on` / `.hdr off` | Toggle, or retry after a failure | on |
-| `.hdr paperwhite <nits>` | Luminance of the GUI and of SDR white | 300 |
+| `.hdr paperwhite <nits>` | Luminance of SDR white in the scene: a fully lit white block | 300 |
+| `.hdr ui <nits>` | Luminance of white in the GUI; 0 = same as `paperwhite` | 0 |
 | `.hdr peak <nits>` | Brightest output; 0 = what the display reports | 0 |
 | `.hdr emissive <x>` | Boost for emissive surfaces: torches, lava, sun, lightning | 10 |
 | `.hdr highlight <x>` | Boost for non-emissive highlights that were about to clip | 0.75 |
@@ -45,8 +46,8 @@ Everything is live and saved to `ModConfig/vshdr.json`.
 | `.hdr smoothsky <0 or 1>` | Linear filtering on the sky gradient texture | 1 |
 | `.hdr dither <0 or 1>` | One-code-value dither at 10-bit PQ | 1 |
 
-Start with `paperwhite`: set it so the GUI is as bright as you like your desktop. Then
-`emissive` to taste. If your display reports an implausible peak (the activation line in
+Start with `paperwhite` for the overall scene brightness, then `ui` if you want the HUD,
+inventory and chat dimmer (or brighter) than the world, then `emissive` to taste. If your display reports an implausible peak (the activation line in
 `client-main.log` shows what it reported), set `.hdr peak` to its real figure so the
 highlight roll-off lands in the right place.
 
@@ -98,7 +99,7 @@ converts scRGB to the display's 10-bit signal without dithering.
 - Windows only. The main menu is SDR. Toggling Windows HDR mid-session needs `.hdr off` then `.hdr on`.
 - Adaptive vsync is treated as vsync on. Vsync off uses tearing presents where supported.
 - Gamut expansion is a stylistic stretch towards P3: the game's art is authored in sRGB, so there is no "true" wide-gamut colour to recover. `.hdr gamut 0` keeps everything inside Rec.709.
-- Screenshots are SDR.
+- Screenshots are SDR, and capture the scene at its brightness relative to the GUI: with `ui` below `paperwhite` the scene in a screenshot is brighter than vanilla and its highlights clip.
 - Mods that replace `final.fsh` wholesale, or bind framebuffer 0 with raw GL calls, will not mix.
 - Overlays that hook OpenGL's buffer swap will not see frames; ones that hook DXGI will.
 

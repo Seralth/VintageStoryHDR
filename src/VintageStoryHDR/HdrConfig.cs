@@ -18,9 +18,18 @@ public sealed class HdrConfig
     public bool ForceOnSdrDisplay { get; set; }
 
     /// <summary>
-    /// Luminance of SDR white -- the GUI, and a fully lit white block -- in nits.
+    /// Luminance of SDR white in the scene -- a fully lit white block -- in nits.
     /// </summary>
     public float PaperWhiteNits { get; set; } = 300f;
+
+    /// <summary>
+    /// Luminance of white in the GUI, in nits. 0 follows <see cref="PaperWhiteNits"/>.
+    /// Needs the patched final shader; without it the GUI and the scene share this level.
+    /// </summary>
+    public float UiNits { get; set; }
+
+    /// <summary>The GUI white level actually in effect.</summary>
+    internal float EffectiveUiNits => UiNits > 0f ? UiNits : PaperWhiteNits;
 
     /// <summary>
     /// Brightest luminance to output, in nits. 0 uses what the display reports over DXGI.
@@ -84,6 +93,7 @@ public sealed class HdrConfig
     internal void Sanitise()
     {
         PaperWhiteNits = Math.Clamp(Finite(PaperWhiteNits, 300f), 80f, 1000f);
+        UiNits = Finite(UiNits, 0f) <= 0f ? 0f : Math.Clamp(UiNits, 40f, 1000f);
         PeakNits = Finite(PeakNits, 0f) <= 0f ? 0f : Math.Clamp(PeakNits, 200f, 10000f);
         EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 10f), 0f, 20f);
         HighlightBoost = Math.Clamp(Finite(HighlightBoost, 0.75f), 0f, 10f);

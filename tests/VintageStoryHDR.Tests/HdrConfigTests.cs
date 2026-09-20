@@ -36,6 +36,23 @@ public class HdrConfigTests
     }
 
     [Fact]
+    public void UiBrightnessFollowsPaperWhiteUntilSet()
+    {
+        HdrConfig config = new() { PaperWhiteNits = 250f };
+        config.Sanitise();
+        Assert.Equal(250f, config.EffectiveUiNits);
+
+        config.UiNits = 120f;
+        config.Sanitise();
+        Assert.Equal(120f, config.EffectiveUiNits);
+        Assert.Equal(250f, config.PaperWhiteNits);
+
+        config.UiNits = -3f;
+        config.Sanitise();
+        Assert.Equal(250f, config.EffectiveUiNits);
+    }
+
+    [Fact]
     public void AnExplicitPeakIsKeptWithinWhatHdr10CanCarry()
     {
         HdrConfig config = new() { PeakNits = 50000f };

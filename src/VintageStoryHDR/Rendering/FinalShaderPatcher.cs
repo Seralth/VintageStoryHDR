@@ -26,6 +26,7 @@ internal static class FinalShaderPatcher
     internal const string UniformHighlightBoost = "vshdrHighlightBoost";
     internal const string UniformGamma = "vshdrGamma";
     internal const string UniformGamut = "vshdrGamut";
+    internal const string UniformSceneScale = "vshdrSceneScale";
 
     /// <summary>Marker that says a source has already been through <see cref="TryPatch"/>.</summary>
     private const string Marker = "// vshdr: patched";
@@ -41,6 +42,7 @@ uniform float " + UniformEmissiveBoost + @" = 0.0;
 uniform float " + UniformHighlightBoost + @" = 0.0;
 uniform float " + UniformGamma + @" = 2.2;
 uniform float " + UniformGamut + @" = 0.0;
+uniform float " + UniformSceneScale + @" = 1.0;
 
 // Vanilla grading works in HSL and clamps lightness to [0,1], which would flatten
 // anything the float scene buffer kept above 1.0. Grade the in-range colour and put
@@ -63,7 +65,9 @@ vec3 vshdrExpand(vec3 encoded, vec2 uv) {
 	float emissive = glow * smoothstep(0.45, 1.0, peak);
 	float highlight = smoothstep(0.8, 1.0, peak);
 	float gain = 1.0 + vshdrEmissiveBoost * emissive + vshdrHighlightBoost * highlight * highlight;
-	vec3 lin = pow(encoded, vec3(vshdrGamma)) * gain;
+	// The presenter maps encoded 1.0 to the GUI's white level. The scene has its own, so it
+	// is scaled here, before the GUI is drawn over it, by the ratio of the two.
+	vec3 lin = pow(encoded, vec3(vshdrGamma)) * gain * vshdrSceneScale;
 
 	// Gamut expansion. Read the colour as if its primaries were P3 and express that back
 	// in Rec.709 coordinates, which takes vivid colours outside [0,1] -- negative

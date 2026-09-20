@@ -280,11 +280,17 @@ void main() {
             return;
         }
 
+        // Encoded 1.0 in the redirect buffer is GUI white. The scene was already scaled
+        // relative to that by the final shader -- if it is patched; if not, scene and GUI
+        // cannot be told apart and both sit at the scene's level, as they always did.
+        float whiteNits = HdrRuntime.FinalShaderPatched ? config.EffectiveUiNits : config.PaperWhiteNits;
+        float brightestWhite = Math.Max(whiteNits, config.PaperWhiteNits);
+
         float peakNits = config.PeakNits > 0f ? config.PeakNits : Display.MaxNits;
-        if (!(peakNits >= config.PaperWhiteNits))
+        if (!(peakNits >= brightestWhite))
         {
             // No usable figure from the display (SDR, or a driver that reports 0).
-            peakNits = Math.Max(config.PaperWhiteNits, 1000f);
+            peakNits = Math.Max(brightestWhite, 1000f);
         }
 
         int previousProgram = GL.GetInteger(GetPName.CurrentProgram);
@@ -312,7 +318,7 @@ void main() {
 
             GL.UseProgram(program);
             GL.Uniform1(uniformGamma, config.SdrGamma);
-            GL.Uniform1(uniformPaperWhite, config.PaperWhiteNits / 80f);
+            GL.Uniform1(uniformPaperWhite, whiteNits / 80f);
             GL.Uniform1(uniformPeak, peakNits / 80f);
             frameCounter = (frameCounter + 1) & 0xFF;
             GL.Uniform1(uniformDitherFrame, config.Dither ? frameCounter : -1);
