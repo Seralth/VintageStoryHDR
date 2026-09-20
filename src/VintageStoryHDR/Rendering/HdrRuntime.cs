@@ -46,6 +46,9 @@ internal static class HdrRuntime
     /// <summary>Whether the final shader currently loaded carries the HDR code path.</summary>
     internal static bool FinalShaderPatched { get; set; }
 
+    /// <summary>Whether the night sky shader currently loaded carries the star boost.</summary>
+    internal static bool NightSkyShaderPatched { get; set; }
+
     internal static HdrPresenter? Presenter => presenter;
 
     /// <summary>Why HDR is not active, for <c>.hdr</c>. Null while it is, or before the first attempt.</summary>
@@ -160,6 +163,7 @@ internal static class HdrRuntime
         gaveUp = false;
         InactiveReason = null;
         FinalShaderPatched = false;
+        NightSkyShaderPatched = false;
     }
 
     private static void Activate(ClientPlatformWindows platform)

@@ -4,7 +4,8 @@ using Vintagestory.Client.NoObf;
 namespace VintageStoryHDR.Rendering;
 
 /// <summary>
-/// Feeds the uniforms <see cref="FinalShaderPatcher"/> added to the game's final shader.
+/// Feeds the uniforms <see cref="FinalShaderPatcher"/> and <see cref="NightSkyShaderPatcher"/>
+/// added to the game's shaders.
 /// They are written with glProgramUniform, which needs no program bound and so cannot
 /// disturb the game's own shader bookkeeping. Locations are cached per program object;
 /// a shader reload produces a new one.
@@ -17,9 +18,14 @@ internal static class FinalShaderUniforms
     private static int locationHighlightBoost = -1;
     private static int locationGamma = -1;
 
+    private static int cachedNightSkyProgram;
+    private static int locationStarBoost = -1;
+    private static int locationStarGamma = -1;
+
     /// <summary>Call right before the final composition pass draws.</summary>
     internal static void Apply()
     {
+        ApplyNightSky(HdrRuntime.Active && HdrRuntime.Config.FloatSceneBuffer ? HdrRuntime.Config.StarBoost : 0f);
         if (!Resolve())
         {
             return;
@@ -35,9 +41,34 @@ internal static class FinalShaderUniforms
     /// <summary>Puts the final shader back on its vanilla path. The value lives in the program object, so it has to be cleared explicitly.</summary>
     internal static void Disable()
     {
+        ApplyNightSky(0f);
         if (Resolve())
         {
             GL.ProgramUniform1(cachedProgram, locationEnabled, 0);
+        }
+    }
+
+    // Set once a frame from the final pass's hook; the night sky is drawn long before it,
+    // so a change lands one frame late, which nobody can see.
+    private static void ApplyNightSky(float starBoost)
+    {
+        int program = ShaderPrograms.Nightsky?.ProgramId ?? 0;
+        if (program == 0 || !HdrRuntime.NightSkyShaderPatched)
+        {
+            return;
+        }
+
+        if (program != cachedNightSkyProgram)
+        {
+            cachedNightSkyProgram = program;
+            locationStarBoost = GL.GetUniformLocation(program, NightSkyShaderPatcher.UniformStarBoost);
+            locationStarGamma = GL.GetUniformLocation(program, NightSkyShaderPatcher.UniformGamma);
+        }
+
+        if (locationStarBoost >= 0)
+        {
+            GL.ProgramUniform1(program, locationStarBoost, starBoost);
+            GL.ProgramUniform1(program, locationStarGamma, HdrRuntime.Config.SdrGamma);
         }
     }
 

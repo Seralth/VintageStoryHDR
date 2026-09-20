@@ -111,6 +111,7 @@ internal static class HdrPatchTargets
         RequireField(problems, typeof(ClientPlatformWindows).GetField("window", AnyInstance), "ClientPlatformWindows.window", typeof(GameWindowNative));
         RequireField(problems, typeof(ShaderPrograms).GetField("Final", AnyStatic), "ShaderPrograms.Final", typeof(ShaderProgramFinal));
         RequireField(problems, SkyTextureId, "ClientMain.skyTextureId", typeof(int));
+        RequireField(problems, typeof(ShaderPrograms).GetField("Nightsky", AnyStatic), "ShaderPrograms.Nightsky", typeof(ShaderProgramNightsky));
         RequireField(problems, typeof(ShaderProgramBase).GetField("ProgramId", AnyInstance), "ShaderProgramBase.ProgramId", typeof(int));
 
         if (!typeof(NativeWindow).IsAssignableFrom(typeof(GameWindowNative)))

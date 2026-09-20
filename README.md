@@ -41,6 +41,7 @@ with the first in-world frame (mods are not loaded on the main menu, which stays
 | `.hdr peak <nits>` | Brightest output; 0 = what the display reports | 0 |
 | `.hdr emissive <x>` | Boost for emissive surfaces | 10 |
 | `.hdr highlight <x>` | Boost for non-emissive highlights | 0.75 |
+| `.hdr stars <x>` | Boost for the night sky's stars (they have no glow channel) | 4 |
 | `.hdr gamma <g>` | SDR decoding gamma | 2.2 |
 | `.hdr floatscene <0 or 1>` | RGBA16F scene buffer and bloom chain | 1 |
 | `.hdr smoothsky <0 or 1>` | Linear filtering on the sky gradient texture | 1 |

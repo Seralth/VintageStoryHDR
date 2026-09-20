@@ -41,6 +41,13 @@ public sealed class HdrConfig
     public float HighlightBoost { get; set; } = 0.75f;
 
     /// <summary>
+    /// How far the stars of the night sky are pushed above paper white. The star cubemap
+    /// has no glow channel, so <see cref="EmissiveBoost"/> never reaches it. Needs
+    /// <see cref="FloatSceneBuffer"/>. 0 disables.
+    /// </summary>
+    public float StarBoost { get; set; } = 4f;
+
+    /// <summary>
     /// Decoding gamma for the game's display-referred output. 2.2 matches what an SDR
     /// monitor does with the same signal; the Windows desktop uses piecewise sRGB, which
     /// looks washed out in the shadows by comparison.
@@ -73,6 +80,7 @@ public sealed class HdrConfig
         PeakNits = Finite(PeakNits, 0f) <= 0f ? 0f : Math.Clamp(PeakNits, 200f, 10000f);
         EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 10f), 0f, 20f);
         HighlightBoost = Math.Clamp(Finite(HighlightBoost, 0.75f), 0f, 10f);
+        StarBoost = Math.Clamp(Finite(StarBoost, 4f), 0f, 50f);
         SdrGamma = Math.Clamp(Finite(SdrGamma, 2.2f), 1.8f, 2.6f);
     }
 
