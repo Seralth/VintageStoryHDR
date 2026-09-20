@@ -1,0 +1,14 @@
+{
+  "type": "code",
+  "modid": "vshdr",
+  "name": "Native HDR",
+  "authors": [ "chrisunfocused" ],
+  "description": "Native HDR output on Windows. Presents the game through an scRGB DXGI swapchain, keeps the scene in floating point end to end, and lets emissive surfaces, the sun and bright highlights exceed paper white instead of clipping. No launcher or injector needed.",
+  "version": "0.1.0",
+  "side": "Client",
+  "requiredOnClient": false,
+  "requiredOnServer": false,
+  "dependencies": {
+    "game": "1.22.0"
+  }
+}

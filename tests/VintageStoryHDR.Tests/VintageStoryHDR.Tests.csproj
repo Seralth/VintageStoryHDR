@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>VintageStoryHDR.Tests</RootNamespace>
+    <RequiresVintageStory>true</RequiresVintageStory>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/VintageStoryHDR/VintageStoryHDR.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- For the presenter smoke test, which needs a real GL context. Supplied by the game, like everything else. -->
+    <Reference Include="OpenTK.Core"><HintPath>$(VintageStoryPath)/Lib/OpenTK.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="OpenTK.Graphics"><HintPath>$(VintageStoryPath)/Lib/OpenTK.Graphics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="OpenTK.Mathematics"><HintPath>$(VintageStoryPath)/Lib/OpenTK.Mathematics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="OpenTK.Windowing.Common"><HintPath>$(VintageStoryPath)/Lib/OpenTK.Windowing.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="OpenTK.Windowing.Desktop"><HintPath>$(VintageStoryPath)/Lib/OpenTK.Windowing.Desktop.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="OpenTK.Windowing.GraphicsLibraryFramework"><HintPath>$(VintageStoryPath)/Lib/OpenTK.Windowing.GraphicsLibraryFramework.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

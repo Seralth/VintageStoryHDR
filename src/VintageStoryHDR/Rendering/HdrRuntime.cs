@@ -1,0 +1,252 @@
+using System;
+using System.Collections.Generic;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
+using Vintagestory.API.Client;
+using Vintagestory.API.Common;
+using Vintagestory.Client.NoObf;
+using VintageStoryHDR.Interop;
+
+namespace VintageStoryHDR.Rendering;
+
+/// <summary>
+/// The live state shared by the patches: whether HDR presentation is in charge right
+/// now, and the presenter doing it. Everything here runs on the render thread.
+///
+/// <para>
+/// The takeover is all-or-nothing and reversible at a frame boundary. Any failure, at
+/// start-up or in the middle of play, drops back to vanilla presentation and stays there
+/// until the player asks again with <c>.hdr on</c>.
+/// </para>
+/// </summary>
+internal static class HdrRuntime
+{
+    private static readonly float[] OpaqueBlack = { 0f, 0f, 0f, 1f };
+
+    private static HdrPresenter? presenter;
+    private static bool gaveUp;
+    private static int floatPrimaryTexture;
+
+    internal static HdrConfig Config { get; set; } = new();
+
+    internal static ILogger? Log { get; set; }
+
+    /// <summary>Set once the mod has patched the game; cleared on unload so stale hooks do nothing.</summary>
+    internal static bool Armed { get; set; }
+
+    /// <summary>True while frames are presented through DXGI instead of the GL buffer swap.</summary>
+    internal static bool Active => presenter is not null;
+
+    /// <summary>Whether the final shader currently loaded carries the HDR code path.</summary>
+    internal static bool FinalShaderPatched { get; set; }
+
+    internal static HdrPresenter? Presenter => presenter;
+
+    /// <summary>Why HDR is not active, for <c>.hdr</c>. Null while it is, or before the first attempt.</summary>
+    internal static string? InactiveReason { get; private set; }
+
+    /// <summary>Forgets an earlier failure so the next frame tries again.</summary>
+    internal static void Retry()
+    {
+        gaveUp = false;
+        InactiveReason = null;
+    }
+
+    /// <summary>
+    /// Frame start, before the game has drawn anything. Brings the presenter in line with
+    /// the config and the window, then clears the redirect framebuffer the way the game is
+    /// about to clear framebuffer 0. Leaves the framebuffer binding as it found it.
+    /// </summary>
+    internal static void OnFrameStart(ClientPlatformWindows platform, List<FrameBufferRef> frameBuffers)
+    {
+        if (!Armed)
+        {
+            return;
+        }
+
+        bool wanted = Config.Enabled && !gaveUp;
+        if (wanted && presenter is null)
+        {
+            Activate(platform);
+        }
+        else if (!wanted && presenter is not null)
+        {
+            Deactivate(Config.Enabled ? InactiveReason : "Disabled in config.");
+        }
+
+        EnsurePrimaryFormat(frameBuffers);
+        if (presenter is null)
+        {
+            return;
+        }
+
+        try
+        {
+            presenter.SyncSize();
+
+            // glClearBuffer ignores the clear colour state but still honours the write masks.
+            int previousFramebuffer = GL.GetInteger(GetPName.DrawFramebufferBinding);
+            bool depthMask = GL.GetBoolean(GetPName.DepthWritemask);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, presenter.RedirectFramebuffer);
+            GL.DepthMask(true);
+            GL.ClearBuffer(ClearBuffer.Color, 0, OpaqueBlack);
+            GL.ClearBuffer(ClearBufferCombined.DepthStencil, 0, 1f, 0);
+            GL.DepthMask(depthMask);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, previousFramebuffer);
+        }
+        catch (HdrUnavailableException e)
+        {
+            Fail(e.Message);
+            EnsurePrimaryFormat(frameBuffers);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        }
+    }
+
+    /// <summary>The scene framebuffers were rebuilt, so the scene colour buffer is RGBA8 again.</summary>
+    internal static void OnFrameBuffersRebuilt(List<FrameBufferRef> frameBuffers)
+    {
+        floatPrimaryTexture = 0;
+        if (Armed && presenter is not null)
+        {
+            EnsurePrimaryFormat(frameBuffers);
+        }
+    }
+
+    /// <summary>Frame end. Returns false when the caller should do the vanilla buffer swap instead.</summary>
+    internal static bool Present(bool vsync)
+    {
+        if (!Armed || presenter is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            presenter.Present(Config, vsync);
+            return true;
+        }
+        catch (HdrUnavailableException e)
+        {
+            Fail(e.Message);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            return false;
+        }
+    }
+
+    /// <summary>Tears everything down. Safe to call when nothing is active.</summary>
+    internal static void Shutdown(List<FrameBufferRef>? frameBuffers)
+    {
+        Deactivate("Mod unloaded.");
+        if (NativeMethods.WglGetCurrentContext() != 0)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            if (frameBuffers is not null)
+            {
+                EnsurePrimaryFormat(frameBuffers);
+            }
+        }
+
+        gaveUp = false;
+        InactiveReason = null;
+        FinalShaderPatched = false;
+    }
+
+    private static void Activate(ClientPlatformWindows platform)
+    {
+        HdrPresenter? created = null;
+        try
+        {
+            nint hwnd = WindowHandle(platform.window);
+            created = HdrPresenter.Create(hwnd);
+
+            if (!created.Display.HdrEnabled && !Config.ForceOnSdrDisplay)
+            {
+                throw new HdrUnavailableException(
+                    "Windows reports this display as SDR. Turn on \"Use HDR\" in Windows display settings, then type .hdr on.");
+            }
+
+            presenter = created;
+            created = null;
+            InactiveReason = null;
+            Log?.Notification(
+                "HDR presentation active: {0}x{1} scRGB, display {2} (peak {3:0} nits, full-frame {4:0} nits), tearing {5}.",
+                presenter.Width,
+                presenter.Height,
+                presenter.Display.HdrEnabled ? "HDR" : "SDR (forced)",
+                presenter.Display.MaxNits,
+                presenter.Display.MaxFullFrameNits,
+                presenter.TearingSupported ? "supported" : "not supported");
+        }
+        catch (Exception e) when (e is HdrUnavailableException or DllNotFoundException or EntryPointNotFoundException)
+        {
+            created?.Dispose();
+            gaveUp = true;
+            InactiveReason = e.Message;
+            Log?.Warning("HDR presentation not available, vanilla presentation stays in charge: {0}", e.Message);
+        }
+    }
+
+    private static void Fail(string reason)
+    {
+        gaveUp = true;
+        Log?.Warning("HDR presentation stopped, back to vanilla presentation: {0}", reason);
+        Deactivate(reason);
+    }
+
+    /// <summary>Drops the presenter. Leaves framebuffer bindings to the caller, who knows where in the frame it is.</summary>
+    private static void Deactivate(string? reason)
+    {
+        if (presenter is null)
+        {
+            return;
+        }
+
+        InactiveReason = reason;
+        presenter.Dispose();
+        presenter = null;
+
+        if (NativeMethods.WglGetCurrentContext() != 0)
+        {
+            FinalShaderUniforms.Disable();
+        }
+    }
+
+    /// <summary>
+    /// Re-specifies the scene colour texture as RGBA16F (or back to vanilla's RGBA8). The
+    /// texture name and its framebuffer attachment stay as they are, so nothing in the
+    /// game needs to know.
+    /// </summary>
+    private static void EnsurePrimaryFormat(List<FrameBufferRef> frameBuffers)
+    {
+        if (frameBuffers.Count == 0 || frameBuffers[0]?.ColorTextureIds is not { Length: > 0 } colorTextures)
+        {
+            return;
+        }
+
+        FrameBufferRef primary = frameBuffers[0];
+        int texture = colorTextures[0];
+        bool wantFloat = presenter is not null && Config.FloatSceneBuffer;
+        bool isFloat = floatPrimaryTexture == texture;
+        if (wantFloat == isFloat)
+        {
+            return;
+        }
+
+        int previousTexture = GL.GetInteger(GetPName.TextureBinding2D);
+        GL.BindTexture(TextureTarget.Texture2D, texture);
+        if (wantFloat)
+        {
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba16f, primary.Width, primary.Height, 0, PixelFormat.Rgba, PixelType.HalfFloat, IntPtr.Zero);
+        }
+        else
+        {
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, primary.Width, primary.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+        }
+
+        GL.BindTexture(TextureTarget.Texture2D, previousTexture);
+        floatPrimaryTexture = wantFloat ? texture : 0;
+    }
+
+    private static unsafe nint WindowHandle(NativeWindow window) => GLFW.GetWin32Window(window.WindowPtr);
+}
