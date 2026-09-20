@@ -26,7 +26,7 @@ public sealed class HdrConfig
     /// Luminance of white in the GUI, in nits. 0 follows <see cref="PaperWhiteNits"/>.
     /// Needs the patched final shader; without it the GUI and the scene share this level.
     /// </summary>
-    public float UiNits { get; set; }
+    public float UiNits { get; set; } = 400f;
 
     /// <summary>The GUI white level actually in effect.</summary>
     internal float EffectiveUiNits => UiNits > 0f ? UiNits : PaperWhiteNits;
@@ -93,7 +93,7 @@ public sealed class HdrConfig
     internal void Sanitise()
     {
         PaperWhiteNits = Math.Clamp(Finite(PaperWhiteNits, 300f), 80f, 1000f);
-        UiNits = Finite(UiNits, 0f) <= 0f ? 0f : Math.Clamp(UiNits, 40f, 1000f);
+        UiNits = Finite(UiNits, 400f) <= 0f ? 0f : Math.Clamp(UiNits, 40f, 1000f);
         PeakNits = Finite(PeakNits, 0f) <= 0f ? 0f : Math.Clamp(PeakNits, 200f, 10000f);
         EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 10f), 0f, 20f);
         HighlightBoost = Math.Clamp(Finite(HighlightBoost, 0.75f), 0f, 10f);

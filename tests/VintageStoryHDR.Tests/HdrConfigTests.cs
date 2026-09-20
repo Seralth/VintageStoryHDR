@@ -38,7 +38,12 @@ public class HdrConfigTests
     [Fact]
     public void UiBrightnessFollowsPaperWhiteUntilSet()
     {
-        HdrConfig config = new() { PaperWhiteNits = 250f };
+        HdrConfig config = new();
+        config.Sanitise();
+        Assert.Equal(400f, config.EffectiveUiNits);
+
+        config.PaperWhiteNits = 250f;
+        config.UiNits = 0f;
         config.Sanitise();
         Assert.Equal(250f, config.EffectiveUiNits);
 

@@ -35,7 +35,7 @@ Everything is live and saved to `ModConfig/vshdr.json`.
 | `.hdr` | Status | |
 | `.hdr on` / `.hdr off` | Toggle, or retry after a failure | on |
 | `.hdr paperwhite <nits>` | Luminance of SDR white in the scene: a fully lit white block | 300 |
-| `.hdr ui <nits>` | Luminance of white in the GUI; 0 = same as `paperwhite` | 0 |
+| `.hdr ui <nits>` | Luminance of white in the GUI; 0 = same as `paperwhite` | 400 |
 | `.hdr peak <nits>` | Brightest output; 0 = what the display reports | 0 |
 | `.hdr emissive <x>` | Boost for emissive surfaces: torches, lava, sun, lightning | 10 |
 | `.hdr highlight <x>` | Boost for non-emissive highlights that were about to clip | 0.75 |
