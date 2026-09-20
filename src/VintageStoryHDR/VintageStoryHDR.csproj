@@ -64,6 +64,7 @@
 
   <ItemGroup>
     <None Include="modinfo.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="modicon.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Assembles the installable mod folder under bin/<Configuration>/mod/. -->
@@ -72,7 +73,7 @@
       <ModFolder>$(OutDir)mod/</ModFolder>
     </PropertyGroup>
     <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="$(ModFolder)" />
-    <Copy SourceFiles="modinfo.json" DestinationFolder="$(ModFolder)" />
+    <Copy SourceFiles="modinfo.json;modicon.png" DestinationFolder="$(ModFolder)" />
   </Target>
 
 </Project>
