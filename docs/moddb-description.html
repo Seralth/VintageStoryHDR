@@ -3,63 +3,63 @@
 
 <p>Native HDR output on Windows, as an ordinary client mod &ndash; no launcher, injector or ReShade. This is not Auto HDR or a filter over the finished image: the scene stays in floating point from start to finish, and the game's own emissive channel decides what is a light source. A torch is bright because the game says it glows, not because it is a light-coloured pixel.</p>
 
-<h3 style="border-bottom:2px solid #c9822b; padding-bottom:3px;">What you get</h3>
+<h3>What you get</h3>
 <ul>
-  <li><strong style="color:#c9822b;">Emissive highlights</strong> &ndash; torches, lava, forges, the sun and lightning go far above paper white.</li>
-  <li><strong style="color:#c9822b;">A real night sky</strong> &ndash; bright stars on a dark sky.</li>
-  <li><strong style="color:#c9822b;">Separate UI brightness</strong> &ndash; the HUD and menus are set independently of the world.</li>
-  <li><strong style="color:#c9822b;">Tasteful wide colour</strong> &ndash; vivid colours move towards P3; neutrals, skin and the GUI do not.</li>
-  <li><strong style="color:#c9822b;">No sky banding</strong> &ndash; fixes three 8-bit bottlenecks the game's normal output hides.</li>
-  <li><strong style="color:#c9822b;">Fails safe</strong> &ndash; if anything is unavailable the game carries on in SDR. Never a black screen.</li>
+  <li><strong>Emissive highlights</strong> &ndash; torches, lava, forges, the sun and lightning go far above paper white.</li>
+  <li><strong>A real night sky</strong> &ndash; bright stars on a dark sky.</li>
+  <li><strong>Separate UI brightness</strong> &ndash; the HUD and menus are set independently of the world.</li>
+  <li><strong>Tasteful wide colour</strong> &ndash; vivid colours move towards P3; neutrals, skin and the GUI do not.</li>
+  <li><strong>No sky banding</strong> &ndash; fixes three 8-bit bottlenecks the game's normal output hides.</li>
+  <li><strong>Fails safe</strong> &ndash; if anything is unavailable the game carries on in SDR. Never a black screen.</li>
 </ul>
 
-<h3 style="border-bottom:2px solid #c9822b; padding-bottom:3px;">Requirements</h3>
+<h3>Requirements</h3>
 <p>Windows 10 or later with <em>Use HDR</em> switched on &middot; an HDR display &middot; a current NVIDIA, AMD or Intel driver &middot; Vintage Story 1.22</p>
 <p style="font-size:0.92em;"><em>Client-side only; works on any server. Tested on NVIDIA &ndash; AMD and Intel reports are very welcome. On Linux and macOS it loads and does nothing.</em></p>
 
-<h3 style="border-bottom:2px solid #c9822b; padding-bottom:3px;">Install</h3>
+<h3>Install</h3>
 <p>Turn on <em>Use HDR</em> in Windows, drop the zip in your Mods folder, join a world, and type <code>.hdr</code> to confirm it is active. The main menu stays SDR &ndash; the game does not load mods there.</p>
 
-<h3 style="border-bottom:2px solid #c9822b; padding-bottom:3px;">Tuning</h3>
+<h3>Tuning</h3>
 <p>Live from chat, and saved. Start with <code>paperwhite</code>, then <code>ui</code>, then <code>emissive</code>.</p>
 <table style="border-collapse:collapse; width:100%;">
   <tbody>
-    <tr style="border-bottom:2px solid #c9822b;">
+    <tr>
       <th style="text-align:left; padding:5px 10px;">Command</th>
       <th style="text-align:left; padding:5px 10px;">What it sets</th>
       <th style="text-align:right; padding:5px 10px;">Default</th>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr paperwhite &lt;nits&gt;</code></td>
       <td style="padding:5px 10px;">Brightness of the world</td>
       <td style="padding:5px 10px; text-align:right;">300</td>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr ui &lt;nits&gt;</code></td>
       <td style="padding:5px 10px;">Brightness of the HUD, inventory, chat and menus</td>
       <td style="padding:5px 10px; text-align:right;">400</td>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr emissive &lt;x&gt;</code></td>
       <td style="padding:5px 10px;">Glowing things: torches, lava, sun, lightning</td>
       <td style="padding:5px 10px; text-align:right;">10</td>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr highlight &lt;x&gt;</code></td>
       <td style="padding:5px 10px;">Other highlights: snow, water glints, clouds</td>
       <td style="padding:5px 10px; text-align:right;">0.75</td>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr stars &lt;x&gt;</code></td>
       <td style="padding:5px 10px;">The stars</td>
       <td style="padding:5px 10px; text-align:right;">4</td>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr gamut &lt;0..1&gt;</code></td>
       <td style="padding:5px 10px;">Wide colour. 0 = off</td>
       <td style="padding:5px 10px; text-align:right;">0.5</td>
     </tr>
-    <tr style="border-bottom:1px solid rgba(128,128,128,0.35);">
+    <tr>
       <td style="padding:5px 10px; white-space:nowrap;"><code>.hdr peak &lt;nits&gt;</code></td>
       <td style="padding:5px 10px;">Brightest output. 0 = ask the display</td>
       <td style="padding:5px 10px; text-align:right;">0</td>
@@ -73,7 +73,7 @@
 </table>
 <p style="font-size:0.92em;"><em>If highlights look flat or harsh, your display may be misreporting its peak brightness &ndash; set <code>.hdr peak</code> to the real figure.</em></p>
 
-<h3 style="border-bottom:2px solid #c9822b; padding-bottom:3px;">If it is not working</h3>
+<h3>If it is not working</h3>
 <p><code>.hdr</code> tells you why, and so does the <code>[vshdr]</code> line in <code>client-main.log</code>.</p>
 <ul>
   <li><strong>&ldquo;display as SDR&rdquo;</strong> &ndash; turn on <em>Use HDR</em> for that monitor, then <code>.hdr on</code>.</li>
@@ -81,11 +81,14 @@
   <li><strong>&ldquo;internals have moved&rdquo;</strong> &ndash; a game update broke a hook. The game runs normally in SDR; check here for an update.</li>
 </ul>
 
-<h3 style="border-bottom:2px solid #c9822b; padding-bottom:3px;">Good to know</h3>
+<h3>Good to know</h3>
 <ul>
   <li>Screenshots are SDR, so they cannot show what this looks like &ndash; you have to see it on the display.</li>
   <li>Toggled Windows HDR while playing? Type <code>.hdr off</code>, then <code>.hdr on</code>.</li>
   <li>Not compatible with mods that replace the game's <code>final</code> shader outright.</li>
 </ul>
+
+<h3>AI use</h3>
+<p>The code for this mod was written by an AI coding assistant (Anthropic's Claude) working under my direction. I set the goals, tested every build in game on my own HDR display, and tuned the look and the defaults by eye. The automated tests run against the real game files and graphics driver. The full source is public on GitHub, so anyone can read exactly what it does.</p>
 
 <p style="text-align:center; margin-top:1.5em;"><a href="https://github.com/cjohnsto-nz/VintageStoryHDR"><strong>Source, technical write-up and issue tracker on GitHub</strong></a></p>
