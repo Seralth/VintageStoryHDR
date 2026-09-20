@@ -32,4 +32,5 @@
 ## Verified on
 
 RTX 3080 Ti, driver 616.92, Windows 11, 3840x2160 HDR: activates, right way up; GUI,
-inventory item rendering, chat, escape menu, mouse and keyboard all work.
+inventory item rendering, chat, escape menu, mouse and keyboard all work. Day-sky banding
+fixes and the star boost confirmed by eye on the HDR display (v0.1.0).
