@@ -13,6 +13,7 @@ DXGI swapchain shared with OpenGL. [README.md](README.md) explains the pipeline;
 ```powershell
 dotnet test tests/VintageStoryHDR.Tests/VintageStoryHDR.Tests.csproj -c Release
 pwsh ./deploy.ps1 -StopGame
+pwsh ./package.ps1                     # tests + Release build + artifacts/vshdr-<version>.zip (checks modinfo and csproj versions agree)
 & "$env:APPDATA\Vintagestory\Vintagestory.exe" -o vshdr-test -p creativebuilding   # straight into a test world
 ```
 
