@@ -1,0 +1,75 @@
+<p><strong>Real HDR output for Vintage Story on Windows.</strong> Torches, lava, forges, the sun, lightning and the stars go above paper white instead of clipping at it, while the HUD stays at the brightness you choose. It is an ordinary client mod: no launcher, no injector, no ReShade.</p>
+
+<p>This is not Auto HDR or a filter over the finished image. The mod keeps the game's scene in floating point, stops the final shader from clipping, and uses the game's own emissive channel to decide what is a light source. A torch is bright because the game says it glows, not because it happens to be a light-coloured pixel.</p>
+
+<h2>What you get</h2>
+<ul>
+  <li><strong>Emissive highlights</strong> &ndash; torches, lava, forges, the sun and lightning are pushed well above paper white.</li>
+  <li><strong>Stars</strong> that are actual points of light against a dark sky.</li>
+  <li><strong>Separate UI brightness</strong> &ndash; set the HUD, inventory, chat and menus independently of the world.</li>
+  <li><strong>Tasteful gamut expansion</strong> &ndash; already-vivid colours (fire, lava, sunsets, deep sky) move towards P3. Neutrals, skin and muted surfaces do not move, brightness is preserved, and the GUI is never touched.</li>
+  <li><strong>No more sky banding</strong> &ndash; fixes three 8-bit bottlenecks that the game's normal 8-bit output hides, including the sky gradient being sampled without filtering.</li>
+  <li><strong>Everything tunes live</strong> from chat, and is saved.</li>
+  <li><strong>Fails safe</strong> &ndash; if anything is unavailable, the game carries on with its normal presentation. You never get a black screen.</li>
+</ul>
+
+<h2>Requirements</h2>
+<ul>
+  <li><strong>Windows 10 (1709) or later</strong>, with <em>Use HDR</em> turned on for the display (Settings &gt; System &gt; Display).</li>
+  <li>An HDR display.</li>
+  <li>A current NVIDIA, AMD or Intel graphics driver. Developed and tested on NVIDIA; reports from AMD and Intel users are very welcome.</li>
+  <li>Vintage Story 1.22.</li>
+</ul>
+<p>Client-side only. Works in single player and on any server; the server does not need it. On Linux and macOS the mod loads, says so once in the log, and does nothing.</p>
+
+<h2>Install</h2>
+<ol>
+  <li>Turn on <em>Use HDR</em> in Windows display settings.</li>
+  <li>Put the zip, still zipped, in your Mods folder.</li>
+  <li>Join a world. HDR starts with the first in-world frame. The main menu stays SDR, because the game does not load mods there.</li>
+  <li>Type <code>.hdr</code> in chat to confirm it is active.</li>
+</ol>
+
+<h2>Tuning</h2>
+<p>All of these take effect immediately and are saved to <code>ModConfig/vshdr.json</code>.</p>
+<table>
+  <thead>
+    <tr><th>Command</th><th>What it does</th><th>Default</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>.hdr</code></td><td>Show status and current settings</td><td></td></tr>
+    <tr><td><code>.hdr on</code> / <code>.hdr off</code></td><td>Toggle HDR, or retry after a failure</td><td>on</td></tr>
+    <tr><td><code>.hdr paperwhite &lt;nits&gt;</code></td><td>Brightness of the world: a fully lit white block</td><td>300</td></tr>
+    <tr><td><code>.hdr ui &lt;nits&gt;</code></td><td>Brightness of the HUD, inventory, chat and menus. 0 = same as paperwhite</td><td>400</td></tr>
+    <tr><td><code>.hdr emissive &lt;x&gt;</code></td><td>Boost for glowing things: torches, lava, sun, lightning</td><td>10</td></tr>
+    <tr><td><code>.hdr highlight &lt;x&gt;</code></td><td>Boost for non-glowing highlights that were about to clip: snow, water glints, clouds</td><td>0.75</td></tr>
+    <tr><td><code>.hdr stars &lt;x&gt;</code></td><td>Boost for the stars</td><td>4</td></tr>
+    <tr><td><code>.hdr gamut &lt;0..1&gt;</code></td><td>How far vivid colours are pushed towards P3. 0 = off</td><td>0.5</td></tr>
+    <tr><td><code>.hdr peak &lt;nits&gt;</code></td><td>Brightest output. 0 = use what the display reports</td><td>0</td></tr>
+    <tr><td><code>.hdr gamma &lt;g&gt;</code></td><td>SDR decoding gamma</td><td>2.2</td></tr>
+  </tbody>
+</table>
+<p><strong>Where to start:</strong> set <code>paperwhite</code> for the overall brightness of the world, then <code>ui</code> for the HUD, then <code>emissive</code> to taste. If highlights look flat or harsh, your display may be reporting the wrong peak brightness &ndash; the activation line in <code>client-main.log</code> shows what it reported &ndash; so set <code>.hdr peak</code> to its real figure.</p>
+<p>Three further switches exist mainly for comparing before and after: <code>.hdr floatscene</code>, <code>.hdr smoothsky</code> and <code>.hdr dither</code>, each taking 0 or 1.</p>
+
+<h2>Troubleshooting</h2>
+<p><code>.hdr</code> tells you why when HDR is inactive. The same reason is in <code>client-main.log</code> on a line starting <code>[vshdr]</code>.</p>
+<ul>
+  <li><strong>&ldquo;Windows reports this display as SDR&rdquo;</strong> &ndash; turn on <em>Use HDR</em> for the monitor the game is on, then type <code>.hdr on</code>.</li>
+  <li><strong>&ldquo;wglDXOpenDeviceNV failed&rdquo;</strong> &ndash; the game is running on a different GPU from the one driving the display, typical of laptops with two GPUs. Set Vintage Story to the high-performance GPU in Windows graphics settings.</li>
+  <li><strong>&ldquo;game internals this mod hooks have moved&rdquo;</strong> &ndash; a game update changed something the mod relies on. The game runs normally in SDR; check here for an update.</li>
+</ul>
+
+<h2>Good to know</h2>
+<ul>
+  <li>Windows only.</li>
+  <li>Screenshots are SDR. With <code>ui</code> set below <code>paperwhite</code> they come out brighter than usual.</li>
+  <li>If you switch Windows HDR on or off while playing, type <code>.hdr off</code> then <code>.hdr on</code>.</li>
+  <li>Adaptive vsync is treated as vsync on.</li>
+  <li>Gamut expansion is a stylistic choice: the game's art is made in sRGB, so there is no &ldquo;true&rdquo; wide colour to recover. <code>.hdr gamut 0</code> turns it off.</li>
+  <li>Not compatible with mods that replace the game's <code>final</code> shader outright. Overlays that hook OpenGL's buffer swap will not see frames; ones that hook DXGI will.</li>
+</ul>
+
+<h2>How it works</h2>
+<p>OpenGL on Windows cannot ask for an HDR surface, but Direct3D can, and graphics drivers let OpenGL render straight into a Direct3D texture. The mod keeps the scene and the bloom chain in 16-bit float, patches the game's final shader at load time so it expands highlights instead of clipping them, redirects the game's window framebuffer into a float buffer so the GUI blends exactly as it always did, and presents the result through an scRGB swapchain. Every shader change sits behind a switch that defaults to off, where the shaders compute exactly what the unmodded game does.</p>
+<p>Source, full technical write-up and issue tracker: <a href="https://github.com/cjohnsto-nz/VintageStoryHDR">github.com/cjohnsto-nz/VintageStoryHDR</a></p>
