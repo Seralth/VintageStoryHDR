@@ -13,12 +13,12 @@ DXGI swapchain shared with OpenGL. [README.md](README.md) explains the pipeline;
 ```powershell
 dotnet test tests/VintageStoryHDR.Tests/VintageStoryHDR.Tests.csproj -c Release
 pwsh ./deploy.ps1 -StopGame
-pwsh ./package.ps1                     # tests + Release build + artifacts/vshdr-<version>.zip (checks modinfo and csproj versions agree)
+pwsh ./package.ps1                     # tests + Release build + artifacts/hdr-<version>.zip (checks modinfo and csproj versions agree)
 & "$env:APPDATA\Vintagestory\Vintagestory.exe" -o vshdr-test -p creativebuilding   # straight into a test world
 ```
 
 The game is at `C:\Users\chris\AppData\Roaming\Vintagestory` (1.22.7); set `VINTAGE_STORY`
-to point elsewhere. Logs are in `%APPDATA%\VintagestoryData\Logs`; grep for `[vshdr]`.
+to point elsewhere. Logs are in `%APPDATA%\VintagestoryData\Logs`; grep for `[hdr]`.
 To inspect game internals: `ilspycmd -t <FullTypeName> VintagestoryLib.dll`.
 
 ## Rules

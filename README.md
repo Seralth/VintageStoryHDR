@@ -20,15 +20,18 @@ On Linux and macOS the mod loads, says so once in the log, and does nothing.
 
 ## Install
 
-Download `vshdr-x.y.z.zip` from [Releases](../../releases) and put it, still zipped, in
+Download `hdr-x.y.z.zip` from [Releases](../../releases) and put it, still zipped, in
 `%APPDATA%\VintagestoryData\Mods`. Join a world. HDR starts with the first in-world frame;
 the main menu stays SDR because the game does not load mods there.
 
 Type `.hdr` in chat to check it is active.
 
+Upgrading from 0.2.0 or earlier: the mod id changed from `vshdr` to `hdr`, so delete the old
+`vshdr-*.zip` from your Mods folder -- otherwise both copies load. Your settings carry over.
+
 ## Tuning
 
-Everything is live and saved to `ModConfig/vshdr.json`.
+Everything is live and saved to `ModConfig/hdr.json`.
 
 | Command | Meaning | Default |
 | --- | --- | --- |
@@ -54,7 +57,7 @@ highlight roll-off lands in the right place.
 ## Troubleshooting
 
 `.hdr` says why when it is inactive, and the same reason is in `client-main.log` on a line
-starting `[vshdr]`.
+starting `[hdr]`.
 
 - **"Windows reports this display as SDR"** -- turn on Use HDR for the monitor the game is
   on, then `.hdr on`.
@@ -109,7 +112,7 @@ Needs the .NET 10 SDK, PowerShell 7 and an installed copy of the game (found in
 `%APPDATA%\Vintagestory`, or wherever `VINTAGE_STORY` points).
 
 ```powershell
-pwsh ./package.ps1            # tests, Release build, artifacts/vshdr-<version>.zip
+pwsh ./package.ps1            # tests, Release build, artifacts/hdr-<version>.zip
 pwsh ./deploy.ps1 -StopGame   # build and install straight into the game's Mods folder
 ```
 

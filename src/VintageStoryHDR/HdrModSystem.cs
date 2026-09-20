@@ -18,8 +18,12 @@ namespace VintageStoryHDR;
 /// </summary>
 public sealed class HdrModSystem : ModSystem
 {
-    private const string ConfigFile = "vshdr.json";
-    private const string HarmonyId = "net.johnstone.vshdr";
+    private const string ConfigFile = "hdr.json";
+
+    /// <summary>The config file of 0.2.0 and earlier, when the mod id was vshdr. Read once, if the new one does not exist yet.</summary>
+    private const string LegacyConfigFile = "vshdr.json";
+
+    private const string HarmonyId = "net.johnstone.hdr";
 
     private Harmony? harmony;
     private ICoreClientAPI? capi;
@@ -210,7 +214,7 @@ public sealed class HdrModSystem : ModSystem
 
         try
         {
-            loaded = api.LoadModConfig<HdrConfig>(ConfigFile);
+            loaded = api.LoadModConfig<HdrConfig>(ConfigFile) ?? api.LoadModConfig<HdrConfig>(LegacyConfigFile);
         }
         catch (Exception e)
         {

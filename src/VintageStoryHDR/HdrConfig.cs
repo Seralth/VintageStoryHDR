@@ -3,7 +3,7 @@ using System;
 namespace VintageStoryHDR;
 
 /// <summary>
-/// ModConfig/vshdr.json. Every value is read live by the render path, so edits made with
+/// ModConfig/hdr.json. Every value is read live by the render path, so edits made with
 /// <c>.hdr</c> in game take effect on the next frame.
 /// </summary>
 public sealed class HdrConfig

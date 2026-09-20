@@ -32,7 +32,12 @@ $modFolder = Join-Path $repoRoot "src/VintageStoryHDR/bin/$Configuration/net10.0
 if (-not (Test-Path $modFolder)) { throw "Built mod folder not found at $modFolder." }
 
 $dataDir = if ($env:VINTAGE_STORY_DATA) { $env:VINTAGE_STORY_DATA } else { Join-Path $env:APPDATA 'VintagestoryData' }
-$target = Join-Path $dataDir 'Mods/vshdr'
+$target = Join-Path $dataDir 'Mods/hdr'
+
+# The mod id was vshdr up to 0.2.0. Two copies under different ids would both hook the game.
+$legacy = Join-Path $dataDir 'Mods/vshdr'
+if (Test-Path $legacy) { Remove-Item $legacy -Recurse -Force }
+Get-ChildItem (Join-Path $dataDir 'Mods') -Filter 'vshdr-*.zip' -ErrorAction SilentlyContinue | Remove-Item -Force
 
 if (Test-Path $target) { Remove-Item $target -Recurse -Force }
 New-Item -ItemType Directory -Path $target -Force | Out-Null
