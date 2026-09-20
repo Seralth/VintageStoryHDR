@@ -35,7 +35,8 @@ public sealed class HdrModSystem : ModSystem
 
         if (!OperatingSystem.IsWindows())
         {
-            Mod.Logger.Notification("HDR output goes through DXGI, which only exists on Windows. Vanilla presentation left untouched.");
+            HdrRuntime.InactiveReason = "HDR output goes through DXGI, which only exists on Windows.";
+            Mod.Logger.Notification("{0} Vanilla presentation left untouched.", HdrRuntime.InactiveReason);
             return;
         }
 
@@ -51,6 +52,7 @@ public sealed class HdrModSystem : ModSystem
                 Mod.Logger.Warning("  - {0}", problem);
             }
 
+            HdrRuntime.InactiveReason = "this game version moved internals the mod hooks; see client-main.log.";
             return;
         }
 

@@ -52,7 +52,7 @@ internal static class HdrRuntime
     internal static HdrPresenter? Presenter => presenter;
 
     /// <summary>Why HDR is not active, for <c>.hdr</c>. Null while it is, or before the first attempt.</summary>
-    internal static string? InactiveReason { get; private set; }
+    internal static string? InactiveReason { get; set; }
 
     /// <summary>Forgets an earlier failure so the next frame tries again.</summary>
     internal static void Retry()
