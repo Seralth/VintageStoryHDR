@@ -7,6 +7,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.Client.NoObf;
 using VintageStoryHDR.Interop;
+using VintageStoryHDR.Platform;
 
 namespace VintageStoryHDR.Rendering;
 
@@ -27,10 +28,14 @@ internal static class HdrRuntime
     private static HdrPresenter? presenter;
     private static bool gaveUp;
     private static int floatPrimaryTexture;
+    private static int smoothSkyTexture;
 
     internal static HdrConfig Config { get; set; } = new();
 
     internal static ILogger? Log { get; set; }
+
+    /// <summary>The running game, for the one field read off it. Null outside a world.</summary>
+    internal static ClientMain? Game { get; set; }
 
     /// <summary>Set once the mod has patched the game; cleared on unload so stale hooks do nothing.</summary>
     internal static bool Armed { get; set; }
@@ -76,6 +81,7 @@ internal static class HdrRuntime
         }
 
         EnsurePrimaryFormat(frameBuffers);
+        EnsureSkyFiltering();
         if (presenter is null)
         {
             return;
@@ -145,8 +151,12 @@ internal static class HdrRuntime
             {
                 EnsurePrimaryFormat(frameBuffers);
             }
+
+            EnsureSkyFiltering();
         }
 
+        Game = null;
+        smoothSkyTexture = 0;
         gaveUp = false;
         InactiveReason = null;
         FinalShaderPatched = false;
@@ -213,9 +223,10 @@ internal static class HdrRuntime
     }
 
     /// <summary>
-    /// Re-specifies the scene colour texture as RGBA16F (or back to vanilla's RGBA8). The
-    /// texture name and its framebuffer attachment stay as they are, so nothing in the
-    /// game needs to know.
+    /// Re-specifies the scene colour texture and the bloom blur targets as RGBA16F (or back
+    /// to vanilla's RGBA8). Texture names and framebuffer attachments stay as they are, so
+    /// nothing in the game needs to know. Sizes are read back from GL because the game does
+    /// not record one for every framebuffer.
     /// </summary>
     private static void EnsurePrimaryFormat(List<FrameBufferRef> frameBuffers)
     {
@@ -224,28 +235,68 @@ internal static class HdrRuntime
             return;
         }
 
-        FrameBufferRef primary = frameBuffers[0];
-        int texture = colorTextures[0];
+        int marker = colorTextures[0];
         bool wantFloat = presenter is not null && Config.FloatSceneBuffer;
-        bool isFloat = floatPrimaryTexture == texture;
+        bool isFloat = floatPrimaryTexture == marker;
         if (wantFloat == isFloat)
         {
             return;
         }
 
         int previousTexture = GL.GetInteger(GetPName.TextureBinding2D);
-        GL.BindTexture(TextureTarget.Texture2D, texture);
-        if (wantFloat)
+        foreach (int index in HdrPatchTargets.PromotedFrameBuffers)
         {
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba16f, primary.Width, primary.Height, 0, PixelFormat.Rgba, PixelType.HalfFloat, IntPtr.Zero);
-        }
-        else
-        {
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, primary.Width, primary.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+            if (index >= frameBuffers.Count || frameBuffers[index]?.ColorTextureIds is not { Length: > 0 } targets)
+            {
+                continue;
+            }
+
+            GL.BindTexture(TextureTarget.Texture2D, targets[0]);
+            GL.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureWidth, out int width);
+            GL.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureHeight, out int height);
+            if (width <= 0 || height <= 0)
+            {
+                continue;
+            }
+
+            if (wantFloat)
+            {
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba16f, width, height, 0, PixelFormat.Rgba, PixelType.HalfFloat, IntPtr.Zero);
+            }
+            else
+            {
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+            }
         }
 
         GL.BindTexture(TextureTarget.Texture2D, previousTexture);
-        floatPrimaryTexture = wantFloat ? texture : 0;
+        floatPrimaryTexture = wantFloat ? marker : 0;
+    }
+
+    /// <summary>
+    /// Switches sky.png between vanilla's nearest filtering and linear. The texture is
+    /// created once per world, so this only touches GL when the wanted state changes.
+    /// </summary>
+    private static void EnsureSkyFiltering()
+    {
+        if (Game is null || HdrPatchTargets.SkyTextureId?.GetValue(Game) is not int texture || texture == 0)
+        {
+            return;
+        }
+
+        bool wantSmooth = presenter is not null && Config.SmoothSkyGradient;
+        if (wantSmooth == (smoothSkyTexture == texture))
+        {
+            return;
+        }
+
+        int previousTexture = GL.GetInteger(GetPName.TextureBinding2D);
+        GL.BindTexture(TextureTarget.Texture2D, texture);
+        int filter = wantSmooth ? (int)TextureMagFilter.Linear : (int)TextureMagFilter.Nearest;
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, filter);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, filter);
+        GL.BindTexture(TextureTarget.Texture2D, previousTexture);
+        smoothSkyTexture = wantSmooth ? texture : 0;
     }
 
     private static unsafe nint WindowHandle(NativeWindow window) => GLFW.GetWin32Window(window.WindowPtr);

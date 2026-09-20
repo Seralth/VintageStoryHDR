@@ -9,9 +9,9 @@ public class HdrConfigTests
         config.Sanitise();
 
         Assert.True(config.Enabled);
-        Assert.Equal(200f, config.PaperWhiteNits);
+        Assert.Equal(300f, config.PaperWhiteNits);
         Assert.Equal(0f, config.PeakNits);
-        Assert.Equal(3f, config.EmissiveBoost);
+        Assert.Equal(10f, config.EmissiveBoost);
         Assert.Equal(2.2f, config.SdrGamma);
     }
 
@@ -28,9 +28,9 @@ public class HdrConfigTests
         };
         config.Sanitise();
 
-        Assert.Equal(200f, config.PaperWhiteNits);
+        Assert.Equal(300f, config.PaperWhiteNits);
         Assert.Equal(0f, config.PeakNits);
-        Assert.Equal(3f, config.EmissiveBoost);
+        Assert.Equal(10f, config.EmissiveBoost);
         Assert.Equal(0f, config.HighlightBoost);
         Assert.Equal(2.6f, config.SdrGamma);
     }

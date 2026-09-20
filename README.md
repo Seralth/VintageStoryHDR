@@ -37,12 +37,14 @@ with the first in-world frame (mods are not loaded on the main menu, which stays
 | Command | Meaning | Default |
 | --- | --- | --- |
 | `.hdr on` / `.hdr off` | Toggle, or retry after a failure | on |
-| `.hdr paperwhite <nits>` | Luminance of the GUI and of SDR white | 200 |
+| `.hdr paperwhite <nits>` | Luminance of the GUI and of SDR white | 300 |
 | `.hdr peak <nits>` | Brightest output; 0 = what the display reports | 0 |
-| `.hdr emissive <x>` | Boost for emissive surfaces | 3 |
+| `.hdr emissive <x>` | Boost for emissive surfaces | 10 |
 | `.hdr highlight <x>` | Boost for non-emissive highlights | 0.75 |
 | `.hdr gamma <g>` | SDR decoding gamma | 2.2 |
-| `.hdr floatscene <0 or 1>` | RGBA16F scene buffer | 1 |
+| `.hdr floatscene <0 or 1>` | RGBA16F scene buffer and bloom chain | 1 |
+| `.hdr smoothsky <0 or 1>` | Linear filtering on the sky gradient texture | 1 |
+| `.hdr dither <0 or 1>` | One-code-value dither at 10-bit PQ | 1 |
 
 If your display reports an implausible peak (the log line on activation shows it), set
 `.hdr peak` to its real figure.

@@ -67,6 +67,23 @@ internal static class HdrPatchTargets
     internal static FieldInfo? FrameBuffers =>
         typeof(ClientPlatformWindows).GetField("frameBuffers", AnyInstance);
 
+    /// <summary>ClientMain.skyTextureId -- internal; the GL name of sky.png, which vanilla samples with nearest filtering.</summary>
+    internal static FieldInfo? SkyTextureId =>
+        typeof(ClientMain).GetField("skyTextureId", AnyInstance);
+
+    /// <summary>
+    /// The 8-bit colour targets that sit between the scene and the screen: the scene itself,
+    /// then the bloom blur chain (half and quarter resolution, two passes each).
+    /// </summary>
+    internal static readonly int[] PromotedFrameBuffers =
+    {
+        (int)EnumFrameBuffer.Primary,
+        (int)EnumFrameBuffer.BlurHorizontalMedRes,
+        (int)EnumFrameBuffer.BlurVerticalMedRes,
+        (int)EnumFrameBuffer.BlurHorizontalLowRes,
+        (int)EnumFrameBuffer.BlurVerticalLowRes,
+    };
+
     /// <summary>
     /// Returns one line per problem found, or an empty list when every target is where
     /// this mod expects it.
@@ -93,6 +110,7 @@ internal static class HdrPatchTargets
         RequireField(problems, FrameBuffers, "ClientPlatformWindows.frameBuffers", typeof(List<FrameBufferRef>));
         RequireField(problems, typeof(ClientPlatformWindows).GetField("window", AnyInstance), "ClientPlatformWindows.window", typeof(GameWindowNative));
         RequireField(problems, typeof(ShaderPrograms).GetField("Final", AnyStatic), "ShaderPrograms.Final", typeof(ShaderProgramFinal));
+        RequireField(problems, SkyTextureId, "ClientMain.skyTextureId", typeof(int));
         RequireField(problems, typeof(ShaderProgramBase).GetField("ProgramId", AnyInstance), "ShaderProgramBase.ProgramId", typeof(int));
 
         if (!typeof(NativeWindow).IsAssignableFrom(typeof(GameWindowNative)))

@@ -20,7 +20,7 @@ public sealed class HdrConfig
     /// <summary>
     /// Luminance of SDR white -- the GUI, and a fully lit white block -- in nits.
     /// </summary>
-    public float PaperWhiteNits { get; set; } = 200f;
+    public float PaperWhiteNits { get; set; } = 300f;
 
     /// <summary>
     /// Brightest luminance to output, in nits. 0 uses what the display reports over DXGI.
@@ -32,7 +32,7 @@ public sealed class HdrConfig
     /// lightning) are pushed above paper white, as a multiple of their SDR luminance. 0
     /// leaves them at SDR level.
     /// </summary>
-    public float EmissiveBoost { get; set; } = 3f;
+    public float EmissiveBoost { get; set; } = 10f;
 
     /// <summary>
     /// How far non-emissive highlights that were about to clip in SDR (sunlit snow,
@@ -48,17 +48,30 @@ public sealed class HdrConfig
     public float SdrGamma { get; set; } = 2.2f;
 
     /// <summary>
-    /// Keep the scene colour buffer in RGBA16F so values above 1.0 survive to the final
-    /// pass. Off keeps the vanilla RGBA8 buffer; highlights then come from the boost
-    /// options alone.
+    /// Keep the scene colour buffer and the bloom blur chain in RGBA16F, so values above
+    /// 1.0 survive to the final pass and bloom over smooth gradients does not band. Off
+    /// keeps the vanilla RGBA8 buffers; highlights then come from the boost options alone.
     /// </summary>
     public bool FloatSceneBuffer { get; set; } = true;
 
+    /// <summary>
+    /// Sample the sky gradient texture with linear filtering. Vanilla uses nearest, which
+    /// turns a 512-row 8-bit gradient into visible steps once the sky is no longer
+    /// quantised to 8 bits on the way out.
+    /// </summary>
+    public bool SmoothSkyGradient { get; set; } = true;
+
+    /// <summary>
+    /// Dither the output by one 10-bit PQ code value. The compositor converts scRGB to the
+    /// display's 10-bit signal without dithering, which bands smooth gradients.
+    /// </summary>
+    public bool Dither { get; set; } = true;
+
     internal void Sanitise()
     {
-        PaperWhiteNits = Math.Clamp(Finite(PaperWhiteNits, 200f), 80f, 1000f);
+        PaperWhiteNits = Math.Clamp(Finite(PaperWhiteNits, 300f), 80f, 1000f);
         PeakNits = Finite(PeakNits, 0f) <= 0f ? 0f : Math.Clamp(PeakNits, 200f, 10000f);
-        EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 3f), 0f, 20f);
+        EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 10f), 0f, 20f);
         HighlightBoost = Math.Clamp(Finite(HighlightBoost, 0.75f), 0f, 10f);
         SdrGamma = Math.Clamp(Finite(SdrGamma, 2.2f), 1.8f, 2.6f);
     }

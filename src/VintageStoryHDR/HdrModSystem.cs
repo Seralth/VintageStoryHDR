@@ -61,6 +61,7 @@ public sealed class HdrModSystem : ModSystem
         // From here the hooks are live. The presenter itself is built at the start of the
         // next frame, on the render thread, and the game reloads its shaders right after
         // mods have started, which is when the final shader picks up its HDR path.
+        HdrRuntime.Game = api.World as ClientMain;
         HdrRuntime.Armed = true;
         Mod.Logger.Notification(
             HdrRuntime.Config.Enabled
@@ -99,7 +100,7 @@ public sealed class HdrModSystem : ModSystem
         CommandArgumentParsers parsers = api.ChatCommands.Parsers;
         api.ChatCommands
             .Create("hdr")
-            .WithDescription("Native HDR: status and live tuning. .hdr [on|off|paperwhite|peak|emissive|highlight|gamma|floatscene] [value]")
+            .WithDescription("Native HDR: status and live tuning. .hdr [on|off|paperwhite|peak|emissive|highlight|gamma|floatscene|smoothsky|dither] [value]")
             .WithArgs(parsers.OptionalWord("setting"), parsers.OptionalFloat("value"))
             .HandleWith(OnCommand);
     }
@@ -139,10 +140,16 @@ public sealed class HdrModSystem : ModSystem
             case "floatscene" when value is not null:
                 config.FloatSceneBuffer = value.Value != 0f;
                 break;
+            case "smoothsky" when value is not null:
+                config.SmoothSkyGradient = value.Value != 0f;
+                break;
+            case "dither" when value is not null:
+                config.Dither = value.Value != 0f;
+                break;
             default:
                 return TextCommandResult.Error(
                     "Usage: .hdr | .hdr on | .hdr off | .hdr paperwhite <nits> | .hdr peak <nits, 0 = display> | " +
-                    ".hdr emissive <x> | .hdr highlight <x> | .hdr gamma <g> | .hdr floatscene <0|1>");
+                    ".hdr emissive <x> | .hdr highlight <x> | .hdr gamma <g> | .hdr floatscene|smoothsky|dither <0|1>");
         }
 
         config.Sanitise();
@@ -171,14 +178,16 @@ public sealed class HdrModSystem : ModSystem
 
         return string.Format(
             CultureInfo.InvariantCulture,
-            "HDR {0}. paperwhite {1:0} nits, peak {2}, emissive {3:0.##}, highlight {4:0.##}, gamma {5:0.##}, floatscene {6}",
+            "HDR {0}. paperwhite {1:0} nits, peak {2}, emissive {3:0.##}, highlight {4:0.##}, gamma {5:0.##}, floatscene {6}, smoothsky {7}, dither {8}",
             state,
             config.PaperWhiteNits,
             config.PeakNits > 0f ? config.PeakNits.ToString("0", CultureInfo.InvariantCulture) + " nits" : "from display",
             config.EmissiveBoost,
             config.HighlightBoost,
             config.SdrGamma,
-            config.FloatSceneBuffer ? 1 : 0);
+            config.FloatSceneBuffer ? 1 : 0,
+            config.SmoothSkyGradient ? 1 : 0,
+            config.Dither ? 1 : 0);
     }
 
     private void LoadConfig(ICoreClientAPI api)

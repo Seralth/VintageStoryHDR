@@ -45,8 +45,25 @@ uniform sampler2D source;
 uniform float gamma;
 uniform float paperWhite; // in scRGB units, 1.0 = 80 nits
 uniform float peak;       // in scRGB units
+uniform int ditherFrame;  // < 0 disables
 in vec2 uv;
 out vec4 outColor;
+
+// SMPTE ST 2084, with 1.0 = 10000 nits.
+vec3 pqEncode(vec3 y) {
+	vec3 p = pow(clamp(y, 0.0, 1.0), vec3(0.1593017578125));
+	return pow((0.8359375 + 18.8515625 * p) / (1.0 + 18.6875 * p), vec3(78.84375));
+}
+vec3 pqDecode(vec3 e) {
+	vec3 p = pow(clamp(e, 0.0, 1.0), vec3(1.0 / 78.84375));
+	return pow(max(p - 0.8359375, 0.0) / (18.8515625 - 18.6875 * p), vec3(1.0 / 0.1593017578125));
+}
+float hash(vec3 p) {
+	p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+	p += dot(p, p.yzx + 33.33);
+	return fract((p.x + p.y) * p.z);
+}
+
 void main() {
 	vec3 encoded = max(texture(source, uv).rgb, vec3(0.0));
 	vec3 lin = pow(encoded, vec3(gamma)) * paperWhite;
@@ -59,6 +76,18 @@ void main() {
 		float range = peak - knee;
 		float rolled = knee + range * (1.0 - exp(-(m - knee) / range));
 		lin *= rolled / m;
+	}
+
+	// The compositor quantises this to the display's 10-bit PQ signal without dithering.
+	// Do it here: triangular noise, one code value wide, in the domain it is quantised in.
+	if (ditherFrame >= 0) {
+		vec3 seed = vec3(gl_FragCoord.xy, float(ditherFrame));
+		vec3 noise = vec3(
+			hash(seed) + hash(seed + 17.0),
+			hash(seed + 31.0) + hash(seed + 47.0),
+			hash(seed + 59.0) + hash(seed + 71.0)) - 1.0;
+		vec3 pq = pqEncode(lin * (80.0 / 10000.0)) + noise / 1023.0;
+		lin = pqDecode(pq) * (10000.0 / 80.0);
 	}
 
 	outColor = vec4(lin, 1.0);
@@ -79,6 +108,8 @@ void main() {
     private int uniformGamma;
     private int uniformPaperWhite;
     private int uniformPeak;
+    private int uniformDitherFrame;
+    private int frameCounter;
 
     private HdrPresenter(nint parentWindow)
     {
@@ -155,6 +186,7 @@ void main() {
             uniformGamma = GL.GetUniformLocation(program, "gamma");
             uniformPaperWhite = GL.GetUniformLocation(program, "paperWhite");
             uniformPeak = GL.GetUniformLocation(program, "peak");
+            uniformDitherFrame = GL.GetUniformLocation(program, "ditherFrame");
             GL.ProgramUniform1(program, GL.GetUniformLocation(program, "source"), 0);
             vertexArray = GL.GenVertexArray();
 
@@ -269,6 +301,8 @@ void main() {
             GL.Uniform1(uniformGamma, config.SdrGamma);
             GL.Uniform1(uniformPaperWhite, config.PaperWhiteNits / 80f);
             GL.Uniform1(uniformPeak, peakNits / 80f);
+            frameCounter = (frameCounter + 1) & 0xFF;
+            GL.Uniform1(uniformDitherFrame, config.Dither ? frameCounter : -1);
             GL.BindTexture(TextureTarget.Texture2D, redirectTexture);
             GL.BindVertexArray(vertexArray);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
