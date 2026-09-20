@@ -4,7 +4,7 @@
   "name": "Native HDR",
   "authors": [ "chrisunfocused" ],
   "description": "Native HDR output for Vintage Story. Windows only.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "side": "Client",
   "requiredOnClient": false,
   "requiredOnServer": false,
