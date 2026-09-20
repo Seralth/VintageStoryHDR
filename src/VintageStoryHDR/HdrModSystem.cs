@@ -102,7 +102,7 @@ public sealed class HdrModSystem : ModSystem
         CommandArgumentParsers parsers = api.ChatCommands.Parsers;
         api.ChatCommands
             .Create("hdr")
-            .WithDescription("Native HDR: status and live tuning. .hdr [on|off|paperwhite|peak|emissive|highlight|stars|gamma|floatscene|smoothsky|dither] [value]")
+            .WithDescription("Native HDR: status and live tuning. .hdr [on|off|paperwhite|peak|emissive|highlight|stars|gamut|gamma|floatscene|smoothsky|dither] [value]")
             .WithArgs(parsers.OptionalWord("setting"), parsers.OptionalFloat("value"))
             .HandleWith(OnCommand);
     }
@@ -136,6 +136,9 @@ public sealed class HdrModSystem : ModSystem
             case "highlight" when value is not null:
                 config.HighlightBoost = value.Value;
                 break;
+            case "gamut" when value is not null:
+                config.GamutExpansion = value.Value;
+                break;
             case "stars" when value is not null:
                 config.StarBoost = value.Value;
                 break;
@@ -154,7 +157,7 @@ public sealed class HdrModSystem : ModSystem
             default:
                 return TextCommandResult.Error(
                     "Usage: .hdr | .hdr on | .hdr off | .hdr paperwhite <nits> | .hdr peak <nits, 0 = display> | " +
-                    ".hdr emissive <x> | .hdr highlight <x> | .hdr stars <x> | .hdr gamma <g> | .hdr floatscene|smoothsky|dither <0|1>");
+                    ".hdr emissive <x> | .hdr highlight <x> | .hdr stars <x> | .hdr gamut <0..1> | .hdr gamma <g> | .hdr floatscene|smoothsky|dither <0|1>");
         }
 
         config.Sanitise();
@@ -183,7 +186,7 @@ public sealed class HdrModSystem : ModSystem
 
         return string.Format(
             CultureInfo.InvariantCulture,
-            "HDR {0}. paperwhite {1:0} nits, peak {2}, emissive {3:0.##}, highlight {4:0.##}, stars {9:0.##}, gamma {5:0.##}, floatscene {6}, smoothsky {7}, dither {8}",
+            "HDR {0}. paperwhite {1:0} nits, peak {2}, emissive {3:0.##}, highlight {4:0.##}, stars {9:0.##}, gamut {10:0.##}, gamma {5:0.##}, floatscene {6}, smoothsky {7}, dither {8}",
             state,
             config.PaperWhiteNits,
             config.PeakNits > 0f ? config.PeakNits.ToString("0", CultureInfo.InvariantCulture) + " nits" : "from display",
@@ -193,7 +196,8 @@ public sealed class HdrModSystem : ModSystem
             config.FloatSceneBuffer ? 1 : 0,
             config.SmoothSkyGradient ? 1 : 0,
             config.Dither ? 1 : 0,
-            config.StarBoost);
+            config.StarBoost,
+            config.GamutExpansion);
     }
 
     private void LoadConfig(ICoreClientAPI api)

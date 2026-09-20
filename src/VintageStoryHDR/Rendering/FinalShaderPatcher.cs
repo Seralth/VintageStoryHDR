@@ -25,6 +25,7 @@ internal static class FinalShaderPatcher
     internal const string UniformEmissiveBoost = "vshdrEmissiveBoost";
     internal const string UniformHighlightBoost = "vshdrHighlightBoost";
     internal const string UniformGamma = "vshdrGamma";
+    internal const string UniformGamut = "vshdrGamut";
 
     /// <summary>Marker that says a source has already been through <see cref="TryPatch"/>.</summary>
     private const string Marker = "// vshdr: patched";
@@ -39,6 +40,7 @@ uniform int " + UniformEnabled + @" = 0;
 uniform float " + UniformEmissiveBoost + @" = 0.0;
 uniform float " + UniformHighlightBoost + @" = 0.0;
 uniform float " + UniformGamma + @" = 2.2;
+uniform float " + UniformGamut + @" = 0.0;
 
 // Vanilla grading works in HSL and clamps lightness to [0,1], which would flatten
 // anything the float scene buffer kept above 1.0. Grade the in-range colour and put
@@ -62,7 +64,28 @@ vec3 vshdrExpand(vec3 encoded, vec2 uv) {
 	float highlight = smoothstep(0.8, 1.0, peak);
 	float gain = 1.0 + vshdrEmissiveBoost * emissive + vshdrHighlightBoost * highlight * highlight;
 	vec3 lin = pow(encoded, vec3(vshdrGamma)) * gain;
-	return pow(lin, vec3(1.0 / vshdrGamma));
+
+	// Gamut expansion. Read the colour as if its primaries were P3 and express that back
+	// in Rec.709 coordinates, which takes vivid colours outside [0,1] -- negative
+	// components are how a colour beyond Rec.709 is written. Weighted by saturation so
+	// neutrals and muted colours stay exactly where they were, and renormalised so only
+	// colourfulness changes, not luminance.
+	if (vshdrGamut > 0.0 && peak > 0.0001) {
+		const mat3 p3To709 = mat3(
+			 1.2249401, -0.0420569, -0.0196376,
+			-0.2249402,  1.0420571, -0.0786361,
+			 0.0,        0.0,        1.0982735);
+		const vec3 luma709 = vec3(0.2126, 0.7152, 0.0722);
+		float low = min(encoded.r, min(encoded.g, encoded.b));
+		float saturation = (peak - low) / peak;
+		vec3 wide = p3To709 * lin;
+		wide *= dot(lin, luma709) / max(dot(wide, luma709), 0.000001);
+		lin = mix(lin, wide, vshdrGamut * smoothstep(0.25, 0.85, saturation));
+	}
+
+	// Sign-preserving encode: the GUI blends over this buffer in encoded space, and the
+	// presenter decodes it the same way.
+	return sign(lin) * pow(abs(lin), vec3(1.0 / vshdrGamma));
 }
 
 ";

@@ -38,6 +38,7 @@ Everything is live and saved to `ModConfig/vshdr.json`.
 | `.hdr peak <nits>` | Brightest output; 0 = what the display reports | 0 |
 | `.hdr emissive <x>` | Boost for emissive surfaces: torches, lava, sun, lightning | 10 |
 | `.hdr highlight <x>` | Boost for non-emissive highlights that were about to clip | 0.75 |
+| `.hdr gamut <0..1>` | Push vivid scene colours from Rec.709 towards P3; neutrals and the GUI do not move | 0.5 |
 | `.hdr stars <x>` | Boost for the night sky's stars | 4 |
 | `.hdr gamma <g>` | SDR decoding gamma | 2.2 |
 | `.hdr floatscene <0 or 1>` | RGBA16F scene buffer and bloom chain | 1 |
@@ -73,7 +74,9 @@ lets GL render into a D3D11 texture.
    they are re-specified as RGBA16F so values above 1.0 survive to the final pass.
 2. **Shaders.** `final.fsh` and `nightsky.fsh` are patched at load, at named anchors. The
    final pass stops clipping, grades without flattening headroom, and expands highlights
-   in linear light, weighted by the game's glow channel. Everything added is behind
+   in linear light, weighted by the game's glow channel. It also widens the gamut of vivid
+   colours towards P3, weighted by saturation and luminance-preserving; colours outside
+   Rec.709 are carried as negative components, which float buffers and scRGB allow. Everything added is behind
    uniforms that default to off, where the shaders compute exactly what vanilla does.
 3. **Redirected default framebuffer.** The game blits the scene to framebuffer 0 and draws
    the GUI over it. Framebuffer 0 is replaced by an RGBA16F framebuffer holding the same
@@ -94,7 +97,7 @@ converts scRGB to the display's 10-bit signal without dithering.
 
 - Windows only. The main menu is SDR. Toggling Windows HDR mid-session needs `.hdr off` then `.hdr on`.
 - Adaptive vsync is treated as vsync on. Vsync off uses tearing presents where supported.
-- Colours stay within Rec.709; only luminance is extended.
+- Gamut expansion is a stylistic stretch towards P3: the game's art is authored in sRGB, so there is no "true" wide-gamut colour to recover. `.hdr gamut 0` keeps everything inside Rec.709.
 - Screenshots are SDR.
 - Mods that replace `final.fsh` wholesale, or bind framebuffer 0 with raw GL calls, will not mix.
 - Overlays that hook OpenGL's buffer swap will not see frames; ones that hook DXGI will.

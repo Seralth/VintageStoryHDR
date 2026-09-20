@@ -17,6 +17,7 @@ internal static class FinalShaderUniforms
     private static int locationEmissiveBoost = -1;
     private static int locationHighlightBoost = -1;
     private static int locationGamma = -1;
+    private static int locationGamut = -1;
 
     private static int cachedNightSkyProgram;
     private static int locationStarBoost = -1;
@@ -36,6 +37,7 @@ internal static class FinalShaderUniforms
         GL.ProgramUniform1(cachedProgram, locationEmissiveBoost, config.EmissiveBoost);
         GL.ProgramUniform1(cachedProgram, locationHighlightBoost, config.HighlightBoost);
         GL.ProgramUniform1(cachedProgram, locationGamma, config.SdrGamma);
+        GL.ProgramUniform1(cachedProgram, locationGamut, config.GamutExpansion);
     }
 
     /// <summary>Puts the final shader back on its vanilla path. The value lives in the program object, so it has to be cleared explicitly.</summary>
@@ -87,6 +89,7 @@ internal static class FinalShaderUniforms
             locationEmissiveBoost = GL.GetUniformLocation(program, FinalShaderPatcher.UniformEmissiveBoost);
             locationHighlightBoost = GL.GetUniformLocation(program, FinalShaderPatcher.UniformHighlightBoost);
             locationGamma = GL.GetUniformLocation(program, FinalShaderPatcher.UniformGamma);
+            locationGamut = GL.GetUniformLocation(program, FinalShaderPatcher.UniformGamut);
         }
 
         return locationEnabled >= 0;

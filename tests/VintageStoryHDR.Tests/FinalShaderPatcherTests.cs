@@ -22,6 +22,7 @@ public class FinalShaderPatcherTests
 
         Assert.True(ok, string.Join("\n", problems));
         Assert.Contains("uniform int vshdrEnabled = 0;", patched);
+        Assert.Contains("uniform float vshdrGamut = 0.0;", patched);
         Assert.Contains("vec4 gradedColor = vshdrColorGrade(color);", patched);
         Assert.Contains("outColor.rgb = vshdrExpand(outColor.rgb, texCoord);", patched);
         Assert.Contains("if (vshdrEnabled == 0) color.rgb = min(color.rgb, vec3(1));", patched);

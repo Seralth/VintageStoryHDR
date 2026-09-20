@@ -41,6 +41,13 @@ public sealed class HdrConfig
     public float HighlightBoost { get; set; } = 0.75f;
 
     /// <summary>
+    /// How far vivid scene colours are pushed from Rec.709 towards the P3 gamut, 0 to 1.
+    /// Weighted by saturation, so neutrals and muted colours do not move at all, and
+    /// luminance is preserved. The GUI is never touched. 0 keeps everything inside Rec.709.
+    /// </summary>
+    public float GamutExpansion { get; set; } = 0.5f;
+
+    /// <summary>
     /// How far the stars of the night sky are pushed above paper white. The star cubemap
     /// has no glow channel, so <see cref="EmissiveBoost"/> never reaches it. Needs
     /// <see cref="FloatSceneBuffer"/>. 0 disables.
@@ -80,6 +87,7 @@ public sealed class HdrConfig
         PeakNits = Finite(PeakNits, 0f) <= 0f ? 0f : Math.Clamp(PeakNits, 200f, 10000f);
         EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 10f), 0f, 20f);
         HighlightBoost = Math.Clamp(Finite(HighlightBoost, 0.75f), 0f, 10f);
+        GamutExpansion = Math.Clamp(Finite(GamutExpansion, 0.5f), 0f, 1f);
         StarBoost = Math.Clamp(Finite(StarBoost, 4f), 0f, 50f);
         SdrGamma = Math.Clamp(Finite(SdrGamma, 2.2f), 1.8f, 2.6f);
     }

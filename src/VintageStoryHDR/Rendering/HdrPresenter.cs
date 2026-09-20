@@ -13,7 +13,8 @@ namespace VintageStoryHDR.Rendering;
 /// A <b>redirect framebuffer</b> (RGBA16F + depth/stencil) stands in for GL's default
 /// framebuffer. The game blits the scene into it and draws the GUI over the top, exactly
 /// as it would into the window. Its contents are display-referred and gamma-encoded like
-/// vanilla's, except that scene highlights may exceed 1.0.
+/// vanilla's, except that scene highlights may exceed 1.0 and scene colours outside
+/// Rec.709 have negative components.
 /// </item>
 /// <item>
 /// A <b>child window</b> covering the game window's client area carries the DXGI
@@ -64,9 +65,21 @@ float hash(vec3 p) {
 	return fract((p.x + p.y) * p.z);
 }
 
+// Linear Rec.709 <-> Rec.2020. The display signal is Rec.2020, so that is the space where
+// wide-gamut colours are non-negative and where quantisation actually happens.
+const mat3 rec709To2020 = mat3(
+	0.6274039, 0.0690973, 0.0163914,
+	0.3292830, 0.9195404, 0.0880133,
+	0.0433131, 0.0113623, 0.8955953);
+const mat3 rec2020To709 = mat3(
+	 1.6604910, -0.1245505, -0.0181508,
+	-0.5876411,  1.1328999, -0.1005789,
+	-0.0728499, -0.0083494,  1.1187297);
+
 void main() {
-	vec3 encoded = max(texture(source, uv).rgb, vec3(0.0));
-	vec3 lin = pow(encoded, vec3(gamma)) * paperWhite;
+	// Sign-preserving decode: negative components are colours outside Rec.709.
+	vec3 encoded = texture(source, uv).rgb;
+	vec3 lin = sign(encoded) * pow(abs(encoded), vec3(gamma)) * paperWhite;
 
 	// Roll the top quarter of the range off towards the display's peak, scaling all
 	// three channels together so bright colours keep their hue instead of going white.
@@ -86,8 +99,8 @@ void main() {
 			hash(seed) + hash(seed + 17.0),
 			hash(seed + 31.0) + hash(seed + 47.0),
 			hash(seed + 59.0) + hash(seed + 71.0)) - 1.0;
-		vec3 pq = pqEncode(lin * (80.0 / 10000.0)) + noise / 1023.0;
-		lin = pqDecode(pq) * (10000.0 / 80.0);
+		vec3 pq = pqEncode(rec709To2020 * lin * (80.0 / 10000.0)) + noise / 1023.0;
+		lin = rec2020To709 * pqDecode(pq) * (10000.0 / 80.0);
 	}
 
 	outColor = vec4(lin, 1.0);

@@ -8,6 +8,7 @@ using Vintagestory.API.Common;
 using Vintagestory.Client.NoObf;
 using VintageStoryHDR.Interop;
 using VintageStoryHDR.Platform;
+using ErrorCode = OpenTK.Graphics.OpenGL.ErrorCode;
 
 namespace VintageStoryHDR.Rendering;
 
@@ -54,6 +55,47 @@ internal static class HdrRuntime
     /// <summary>Why HDR is not active, for <c>.hdr</c>. Null while it is, or before the first attempt.</summary>
     internal static string? InactiveReason { get; set; }
 
+    /// <summary>
+    /// Attributes GL errors to this mod's hooks. glGetError is a pipeline sync, so it only
+    /// runs for the first few hundred frames after arming -- long enough to cover start-up,
+    /// the first framebuffer rebuild and the first shader reload. Call <see cref="GlCheckBegin"/>
+    /// before a hook's GL work to report errors that were already pending (not ours), and
+    /// <see cref="GlCheckEnd"/> after it.
+    /// </summary>
+    private static int glChecksLeft = 600;
+
+    internal static bool GlCheckBegin()
+    {
+        if (glChecksLeft <= 0)
+        {
+            return false;
+        }
+
+        glChecksLeft--;
+        ErrorCode pending;
+        while ((pending = GL.GetError()) != ErrorCode.NoError)
+        {
+            // Reading an error clears it, so say so: otherwise the game would have reported it.
+            Log?.VerboseDebug("GL error {0} was already pending when this mod's hook ran; it was raised by the game or another mod.", pending);
+        }
+
+        return true;
+    }
+
+    internal static void GlCheckEnd(bool checking, string where)
+    {
+        if (!checking)
+        {
+            return;
+        }
+
+        ErrorCode error = GL.GetError();
+        if (error != ErrorCode.NoError)
+        {
+            Log?.Warning("GL error {0} raised in {1}. Please report this.", error, where);
+        }
+    }
+
     /// <summary>Forgets an earlier failure so the next frame tries again.</summary>
     internal static void Retry()
     {
@@ -72,6 +114,14 @@ internal static class HdrRuntime
         {
             return;
         }
+
+        bool checking = GlCheckBegin();
+        FrameStart(platform, frameBuffers);
+        GlCheckEnd(checking, "frame start");
+    }
+
+    private static void FrameStart(ClientPlatformWindows platform, List<FrameBufferRef> frameBuffers)
+    {
 
         bool wanted = Config.Enabled && !gaveUp;
         if (wanted && presenter is null)
@@ -118,7 +168,9 @@ internal static class HdrRuntime
         floatPrimaryTexture = 0;
         if (Armed && presenter is not null)
         {
+            bool checking = GlCheckBegin();
             EnsurePrimaryFormat(frameBuffers);
+            GlCheckEnd(checking, "framebuffer rebuild");
         }
     }
 
@@ -132,7 +184,9 @@ internal static class HdrRuntime
 
         try
         {
+            bool checking = GlCheckBegin();
             presenter.Present(Config, vsync);
+            GlCheckEnd(checking, "present");
             return true;
         }
         catch (HdrUnavailableException e)

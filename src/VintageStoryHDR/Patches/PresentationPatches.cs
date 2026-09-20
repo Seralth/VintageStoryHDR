@@ -86,7 +86,9 @@ internal static class PresentationPatches
         Seen(4, "RenderFinalComposition");
         if (HdrRuntime.Armed)
         {
+            bool checking = HdrRuntime.GlCheckBegin();
             FinalShaderUniforms.Apply();
+            HdrRuntime.GlCheckEnd(checking, "final shader uniforms");
         }
     }
 
