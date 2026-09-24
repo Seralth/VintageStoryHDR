@@ -79,13 +79,13 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
 
     private void Initialise(nint parent, int logicalWidth, int logicalHeight, int bufferScale)
     {
-        queue = Native.wl_display_create_queue(Display);
-        wrapper = Native.wl_proxy_create_wrapper(Display);
+        queue = Created(Native.wl_display_create_queue(Display), "an event queue");
+        wrapper = Created(Native.wl_proxy_create_wrapper(Display), "a display wrapper");
         Native.wl_proxy_set_queue(wrapper, queue);
 
         Arg* args = stackalloc Arg[4];
         args[0] = default;
-        registry = Native.wl_proxy_marshal_array_flags(wrapper, DisplayGetRegistry, Interface("wl_registry_interface"), Native.wl_proxy_get_version(wrapper), 0, args);
+        registry = Created(Native.wl_proxy_marshal_array_flags(wrapper, DisplayGetRegistry, Interface("wl_registry_interface"), Native.wl_proxy_get_version(wrapper), 0, args), "the registry");
 
         listener = (nint)NativeMemory.AllocZeroed(2, (nuint)sizeof(nint));
         ((nint*)listener)[0] = (nint)(delegate* unmanaged[Cdecl]<nint, nint, uint, byte*, uint, void>)&OnGlobal;
@@ -109,7 +109,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         subcompositor = Bind(subcompositorName, "wl_subcompositor", 1);
 
         args[0] = default;
-        Surface = Native.wl_proxy_marshal_array_flags(compositor, CompositorCreateSurface, Interface("wl_surface_interface"), Native.wl_proxy_get_version(compositor), 0, args);
+        Surface = Created(Native.wl_proxy_marshal_array_flags(compositor, CompositorCreateSurface, Interface("wl_surface_interface"), Native.wl_proxy_get_version(compositor), 0, args), "a surface");
 
         // No input region: pointer input falls through to the game's surface underneath.
         nint emptyRegion = CreateRegion(0, 0);
@@ -120,7 +120,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         args[0] = default;
         args[1] = new Arg { Object = Surface };
         args[2] = new Arg { Object = parent };
-        subsurface = Native.wl_proxy_marshal_array_flags(subcompositor, SubcompositorGetSubsurface, Interface("wl_subsurface_interface"), 1, 0, args);
+        subsurface = Created(Native.wl_proxy_marshal_array_flags(subcompositor, SubcompositorGetSubsurface, Interface("wl_subsurface_interface"), 1, 0, args), "a subsurface");
         args[0] = new Arg { Int = 0 };
         args[1] = new Arg { Int = 0 };
         _ = Native.wl_proxy_marshal_array_flags(subsurface, SubsurfaceSetPosition, 0, 1, 0, args);
@@ -130,7 +130,16 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
 
         if (colorManagerName != 0)
         {
-            luminance = new DisplayLuminanceFeedback(Display, queue, registry, colorManagerName, parent);
+            try
+            {
+                luminance = new DisplayLuminanceFeedback(Display, queue, registry, colorManagerName, parent);
+            }
+            catch (HdrUnavailableException)
+            {
+                // The display's luminances are a refinement; without them the presenter
+                // falls back to the configured or default figures.
+                luminance = null;
+            }
         }
     }
 
@@ -143,7 +152,11 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
     /// <summary>Processes compositor events. Call once per frame. Returns true when <see cref="Luminance"/> changed.</summary>
     internal bool Pump()
     {
-        _ = Native.wl_display_dispatch_queue_pending(Display, queue);
+        if (Native.wl_display_dispatch_queue_pending(Display, queue) < 0)
+        {
+            throw new HdrUnavailableException("The Wayland connection failed.");
+        }
+
         return luminance?.Pump() ?? false;
     }
 
@@ -196,29 +209,14 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         }
     }
 
-    private nint Bind(uint name, string interfaceName, uint version)
-    {
-        nint utf8Name = Marshal.StringToCoTaskMemUTF8(interfaceName);
-        try
-        {
-            Arg* args = stackalloc Arg[4];
-            args[0] = new Arg { Uint = name };
-            args[1] = new Arg { Object = utf8Name };
-            args[2] = new Arg { Uint = version };
-            args[3] = default;
-            return Native.wl_proxy_marshal_array_flags(registry, RegistryBind, Interface(interfaceName + "_interface"), version, 0, args);
-        }
-        finally
-        {
-            Marshal.FreeCoTaskMem(utf8Name);
-        }
-    }
+    private nint Bind(uint name, string interfaceName, uint version) =>
+        BindGlobal(registry, name, interfaceName, Interface(interfaceName + "_interface"), version);
 
     private nint CreateRegion(int width, int height)
     {
         Arg* args = stackalloc Arg[4];
         args[0] = default;
-        nint region = Native.wl_proxy_marshal_array_flags(compositor, CompositorCreateRegion, Interface("wl_region_interface"), Native.wl_proxy_get_version(compositor), 0, args);
+        nint region = Created(Native.wl_proxy_marshal_array_flags(compositor, CompositorCreateRegion, Interface("wl_region_interface"), Native.wl_proxy_get_version(compositor), 0, args), "a region");
         if (width > 0 && height > 0)
         {
             args[0] = new Arg { Int = 0 };
@@ -252,7 +250,36 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         }
     }
 
-    private static nint Interface(string symbol) => NativeLibrary.GetExport(NativeLibrary.Load(Native.Library), symbol);
+    private static readonly Lazy<nint> WaylandLibrary = new(() => NativeLibrary.Load(Native.Library));
+
+    private static nint Interface(string symbol) => NativeLibrary.GetExport(WaylandLibrary.Value, symbol);
+
+    /// <summary>
+    /// A proxy a request just created. libwayland returns null when it cannot create one
+    /// (out of memory, or the connection already failed); passing that on would crash inside
+    /// libwayland instead of falling back to vanilla presentation.
+    /// </summary>
+    internal static nint Created(nint proxy, string what) =>
+        proxy != 0 ? proxy : throw new HdrUnavailableException($"The Wayland connection could not create {what}.");
+
+    /// <summary>wl_registry.bind of global <paramref name="name"/>, typed by <paramref name="interfacePointer"/>.</summary>
+    internal static nint BindGlobal(nint registry, uint name, string interfaceName, nint interfacePointer, uint version)
+    {
+        nint utf8Name = Marshal.StringToCoTaskMemUTF8(interfaceName);
+        try
+        {
+            Arg* args = stackalloc Arg[4];
+            args[0] = new Arg { Uint = name };
+            args[1] = new Arg { Object = utf8Name };
+            args[2] = new Arg { Uint = version };
+            args[3] = default;
+            return Created(Native.wl_proxy_marshal_array_flags(registry, RegistryBind, interfacePointer, version, 0, args), interfaceName);
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(utf8Name);
+        }
+    }
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static void OnGlobal(nint data, nint registry, uint name, byte* interfaceName, uint version)

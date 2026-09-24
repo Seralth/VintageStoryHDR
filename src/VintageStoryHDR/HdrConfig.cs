@@ -25,13 +25,17 @@ public sealed class HdrConfig
     /// SDR white the display reports (on Linux, the compositor's SDR brightness), or
     /// <see cref="FallbackPaperWhiteNits"/> where it reports none. Defaults to 0 on Linux.
     /// </summary>
-    public float PaperWhiteNits { get; set; } = OperatingSystem.IsWindows() ? FallbackPaperWhiteNits : 0f;
+    public float PaperWhiteNits { get; set; } = DefaultPaperWhiteNits;
+
+    private static float DefaultPaperWhiteNits => OperatingSystem.IsWindows() ? FallbackPaperWhiteNits : 0f;
 
     /// <summary>
     /// Luminance of white in the GUI, in nits. 0 follows the scene's paper white.
     /// Needs the patched final shader; without it the GUI and the scene share this level.
     /// </summary>
-    public float UiNits { get; set; } = OperatingSystem.IsWindows() ? 400f : 0f;
+    public float UiNits { get; set; } = DefaultUiNits;
+
+    private static float DefaultUiNits => OperatingSystem.IsWindows() ? 400f : 0f;
 
     /// <summary>SDR white the display currently reports, 0 if none. Kept up to date by the presenter; not saved.</summary>
     internal float DisplaySdrWhiteNits { get; set; }
@@ -104,9 +108,10 @@ public sealed class HdrConfig
 
     internal void Sanitise()
     {
-        float paperWhite = Finite(PaperWhiteNits, FallbackPaperWhiteNits);
+        float paperWhite = Finite(PaperWhiteNits, DefaultPaperWhiteNits);
         PaperWhiteNits = paperWhite <= 0f ? 0f : Math.Clamp(paperWhite, 80f, 1000f);
-        UiNits = Finite(UiNits, 400f) <= 0f ? 0f : Math.Clamp(UiNits, 40f, 1000f);
+        float ui = Finite(UiNits, DefaultUiNits);
+        UiNits = ui <= 0f ? 0f : Math.Clamp(ui, 40f, 1000f);
         PeakNits = Finite(PeakNits, 0f) <= 0f ? 0f : Math.Clamp(PeakNits, 200f, 10000f);
         EmissiveBoost = Math.Clamp(Finite(EmissiveBoost, 10f), 0f, 20f);
         HighlightBoost = Math.Clamp(Finite(HighlightBoost, 0.75f), 0f, 10f);

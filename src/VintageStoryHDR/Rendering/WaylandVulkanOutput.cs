@@ -62,6 +62,9 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
     /// <summary>How long a present may wait for a swapchain image before the frame is skipped (minimised or hidden window).</summary>
     private const ulong AcquireTimeoutNs = 100_000_000;
 
+    internal const string SdrDisplayMessage =
+        "The compositor reports this display as SDR (its peak does not exceed SDR white). Turn on HDR for the display in the system settings, then type .hdr on.";
+
     /// <summary>Reference white of PQ content when the image description does not set one (color-management-v1).</summary>
     private const float PqReferenceWhiteNits = 203f;
 
@@ -123,6 +126,7 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
     private delegate* unmanaged<nint, uint, VkSubmitInfo*, ulong, int> queueSubmit;
     private delegate* unmanaged<nint, VkPresentInfoKHR*, int> queuePresent;
     private delegate* unmanaged<nint, int> deviceWaitIdle;
+    private delegate* unmanaged<nint, byte*, nint> getDeviceProcAddr;
 
     private WaylandVulkanOutput(NativeWindow window)
     {
@@ -226,14 +230,17 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
         DisplayLuminance? luminance = overlay?.Luminance;
         if (luminance is { MaxNits: > 0f } l)
         {
-            Display = new DisplayInfo(HdrEnabled: true, l.MinNits, l.MaxNits, l.MaxFrameAverageNits, l.ReferenceNits);
+            // An SDR output is described with its peak at SDR white: no headroom above it.
+            bool hdr = l.ReferenceNits <= 0f || l.MaxNits > l.ReferenceNits * 1.05f;
+            Display = new DisplayInfo(hdr, l.MinNits, l.MaxNits, l.MaxFrameAverageNits, l.ReferenceNits);
             ContentScale = l.ReferenceNits > 0f ? PqReferenceWhiteNits / l.ReferenceNits : 1f;
             HdrRuntime.Log?.Notification(
-                "Compositor reports the display at {0:0} nits peak, {1:0} nits SDR white, {2:0.####} nits black; HDR10 output scaled by {3:0.###} to match.",
+                "Compositor reports the display ({4}) at {0:0} nits peak, {1:0} nits SDR white, {2:0.####} nits black; HDR10 output scaled by {3:0.###} to match.",
                 l.MaxNits,
                 l.ReferenceNits,
                 l.MinNits,
-                l.ReferenceNits > 0f ? PqReferenceWhiteNits / l.ReferenceNits : 1f);
+                l.ReferenceNits > 0f ? PqReferenceWhiteNits / l.ReferenceNits : 1f,
+                hdr ? "HDR" : "SDR, no headroom above SDR white");
         }
         else
         {
@@ -267,6 +274,11 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
         if (overlay!.Pump())
         {
             UpdateDisplay();
+            if (!Display.HdrEnabled && !HdrRuntime.Config.ForceOnSdrDisplay)
+            {
+                // The window moved to an SDR display, or its HDR was switched off.
+                throw new HdrUnavailableException(SdrDisplayMessage);
+            }
         }
 
         if (!frameWritten)
@@ -392,11 +404,14 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
             DestroySharedTexture();
             DeleteGlSemaphore(ref glDoneGl);
             DeleteGlSemaphore(ref vkDoneGl);
-            if (vsyncChanged)
+            // Put vsync back only if it is still what this output set; if the game changed it
+            // meanwhile (its own vsync setting), that newer choice stands.
+            if (vsyncChanged && window.VSync == VSyncMode.Off)
             {
                 window.VSync = previousVSync;
-                vsyncChanged = false;
             }
+
+            vsyncChanged = false;
         }
 
         if (device != 0)
@@ -772,6 +787,7 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
         int fd;
         Check(((delegate* unmanaged<nint, VkGetFdInfo*, int*, int>)DeviceProc("vkGetMemoryFdKHR"u8))(device, &fdInfo, &fd), "vkGetMemoryFdKHR");
 
+        GlErrors.DrainPending();
         uint memoryObject;
         gl.CreateMemoryObjects(1, &memoryObject);
         glMemoryObject = memoryObject;
@@ -1039,7 +1055,11 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
 
     private nint DeviceProc(ReadOnlySpan<byte> name)
     {
-        var getDeviceProcAddr = (delegate* unmanaged<nint, byte*, nint>)InstanceProc("vkGetDeviceProcAddr"u8);
+        if (getDeviceProcAddr == null)
+        {
+            getDeviceProcAddr = (delegate* unmanaged<nint, byte*, nint>)InstanceProc("vkGetDeviceProcAddr"u8);
+        }
+
         nint address;
         fixed (byte* p = name)
         {

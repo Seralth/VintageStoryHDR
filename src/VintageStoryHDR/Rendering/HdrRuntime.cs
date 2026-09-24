@@ -232,7 +232,9 @@ internal static class HdrRuntime
             if (!created.Display.HdrEnabled && !Config.ForceOnSdrDisplay)
             {
                 throw new HdrUnavailableException(
-                    "Windows reports this display as SDR. Turn on \"Use HDR\" in Windows display settings, then type .hdr on.");
+                    OperatingSystem.IsWindows()
+                        ? "Windows reports this display as SDR. Turn on \"Use HDR\" in Windows display settings, then type .hdr on."
+                        : WaylandVulkanOutput.SdrDisplayMessage);
             }
 
             presenter = created;
@@ -275,6 +277,7 @@ internal static class HdrRuntime
         InactiveReason = reason;
         presenter.Dispose();
         presenter = null;
+        Config.DisplaySdrWhiteNits = 0f;
 
         if (GlContext.IsCurrent)
         {

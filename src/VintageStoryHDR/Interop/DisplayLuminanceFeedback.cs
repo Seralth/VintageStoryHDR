@@ -63,41 +63,34 @@ internal sealed unsafe class DisplayLuminanceFeedback : IDisposable
     {
         this.display = display;
         self = GCHandle.Alloc(this);
-
-        nint interfaceName = Marshal.StringToCoTaskMemUTF8("wp_color_manager_v1");
         try
         {
-            Arg* args = stackalloc Arg[4];
-            args[0] = new Arg { Uint = managerName };
-            args[1] = new Arg { Object = interfaceName };
-            args[2] = new Arg { Uint = 1 };
-            args[3] = default;
-            manager = Native.wl_proxy_marshal_array_flags(registry, 0, Protocol.Manager, 1, 0, args); // wl_registry.bind
-        }
-        finally
-        {
-            Marshal.FreeCoTaskMem(interfaceName);
-        }
+            manager = WaylandSubsurface.BindGlobal(registry, managerName, "wp_color_manager_v1", Protocol.Manager, 1);
+            Listen(manager);
 
-        Listen(manager);
+            Arg* request = stackalloc Arg[2];
+            request[0] = default;
+            request[1] = new Arg { Object = surface };
+            feedback = WaylandSubsurface.Created(Native.wl_proxy_marshal_array_flags(manager, ManagerGetSurfaceFeedback, Protocol.Feedback, 1, 0, request), "colour-management feedback");
+            Listen(feedback);
 
-        Arg* request = stackalloc Arg[2];
-        request[0] = default;
-        request[1] = new Arg { Object = surface };
-        feedback = Native.wl_proxy_marshal_array_flags(manager, ManagerGetSurfaceFeedback, Protocol.Feedback, 1, 0, request);
-        Listen(feedback);
+            RequestPreferred();
 
-        RequestPreferred();
-
-        // Answer the first question before the first frame, so activation already knows the peak.
-        for (int i = 0; i < 4 && Current is null && description + info != 0; i++)
-        {
-            if (Native.wl_display_roundtrip_queue(display, queue) < 0)
+            // Answer the first question before the first frame, so activation already knows the peak.
+            for (int i = 0; i < 4 && Current is null && description + info != 0; i++)
             {
-                break;
-            }
+                if (Native.wl_display_roundtrip_queue(display, queue) < 0)
+                {
+                    break;
+                }
 
-            _ = Pump();
+                _ = Pump();
+            }
+        }
+        catch
+        {
+            Dispose();
+            throw;
         }
     }
 
@@ -108,17 +101,8 @@ internal sealed unsafe class DisplayLuminanceFeedback : IDisposable
     {
         bool changed = false;
 
-        if (descriptionReady && description != 0)
-        {
-            descriptionReady = false;
-            Arg* args = stackalloc Arg[1];
-            args[0] = default;
-            info = Native.wl_proxy_marshal_array_flags(description, DescriptionGetInformation, Protocol.Info, 1, 0, args);
-            Listen(info);
-            DestroyDescription();
-            _ = Native.wl_display_flush(display);
-        }
-
+        // Publish a finished answer first: a description that became ready in the same
+        // dispatch belongs to a newer question, and starting it would replace `info`.
         if (infoDone)
         {
             infoDone = false;
@@ -130,6 +114,21 @@ internal sealed unsafe class DisplayLuminanceFeedback : IDisposable
                 maxFallNits);
             changed = Current != next;
             Current = next;
+        }
+
+        if (descriptionReady && description != 0)
+        {
+            descriptionReady = false;
+            Arg* args = stackalloc Arg[1];
+            args[0] = default;
+            info = Native.wl_proxy_marshal_array_flags(description, DescriptionGetInformation, Protocol.Info, 1, 0, args);
+            if (info != 0)
+            {
+                Listen(info);
+            }
+
+            DestroyDescription();
+            _ = Native.wl_display_flush(display);
         }
 
         if (preferredChanged)
@@ -165,6 +164,10 @@ internal sealed unsafe class DisplayLuminanceFeedback : IDisposable
 
     private void RequestPreferred()
     {
+        // An answer still in flight describes the previous preference; its proxy is dropped
+        // so its remaining events are discarded, and the figures start over.
+        DestroyInfo();
+        infoDone = false;
         DestroyDescription();
         minNits = maxNits = referenceNits = targetMinNits = targetMaxNits = maxFallNits = 0f;
         haveTarget = false;
@@ -172,7 +175,11 @@ internal sealed unsafe class DisplayLuminanceFeedback : IDisposable
         Arg* args = stackalloc Arg[1];
         args[0] = default;
         description = Native.wl_proxy_marshal_array_flags(feedback, FeedbackGetPreferred, Protocol.Description, 1, 0, args);
-        Listen(description);
+        if (description != 0)
+        {
+            Listen(description);
+        }
+
         _ = Native.wl_display_flush(display);
     }
 

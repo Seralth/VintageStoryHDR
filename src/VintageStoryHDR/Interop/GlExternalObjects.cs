@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using ErrorCode = OpenTK.Graphics.OpenGL.ErrorCode;
 
 namespace VintageStoryHDR.Interop;
 
@@ -56,7 +57,7 @@ internal sealed unsafe class GlExternalObjects
         ImportSemaphoreFd = (delegate* unmanaged<uint, uint, int, void>)Resolve("glImportSemaphoreFdEXT"u8);
         WaitSemaphore = (delegate* unmanaged<uint, uint, uint*, uint, uint*, uint*, void>)Resolve("glWaitSemaphoreEXT"u8);
         SignalSemaphore = (delegate* unmanaged<uint, uint, uint*, uint, uint*, uint*, void>)Resolve("glSignalSemaphoreEXT"u8);
-        GetUnsignedBytev = (delegate* unmanaged<uint, byte*, void>)Resolve("glGetUnsignedBytevEXT"u8);
+        GetUnsignedBytei = (delegate* unmanaged<uint, uint, byte*, void>)Resolve("glGetUnsignedBytei_vEXT"u8);
     }
 
     internal delegate* unmanaged<int, uint*, void> CreateMemoryObjects { get; }
@@ -81,13 +82,22 @@ internal sealed unsafe class GlExternalObjects
     /// <summary>(semaphore, numBufferBarriers, buffers, numTextureBarriers, textures, dstLayouts)</summary>
     internal delegate* unmanaged<uint, uint, uint*, uint, uint*, uint*, void> SignalSemaphore { get; }
 
-    internal delegate* unmanaged<uint, byte*, void> GetUnsignedBytev { get; }
+    /// <summary>(target, index, data): EXT_external_objects defines DEVICE_UUID_EXT as an indexed query.</summary>
+    internal delegate* unmanaged<uint, uint, byte*, void> GetUnsignedBytei { get; }
 
     /// <summary>The UUID of the device the current GL context runs on, to find the same device in Vulkan.</summary>
     internal Guid DeviceUuidOfContext()
     {
         byte* uuid = stackalloc byte[16];
-        GetUnsignedBytev(DeviceUuid, uuid);
+        new Span<byte>(uuid, 16).Clear();
+        GlErrors.DrainPending();
+        GetUnsignedBytei(DeviceUuid, 0, uuid);
+        ErrorCode error = GL.GetError();
+        if (error != ErrorCode.NoError)
+        {
+            throw new HdrUnavailableException($"The OpenGL driver did not report its device UUID ({error}).");
+        }
+
         return new Guid(new ReadOnlySpan<byte>(uuid, 16));
     }
 

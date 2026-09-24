@@ -109,9 +109,8 @@ void main() {
 		return;
 	}
 
-	vec3 pq = pqEncode(rec709To2020 * lin * (80.0 / 10000.0)) + noise / 1023.0;
-
 	if (ditherFrame >= 0) {
+		vec3 pq = pqEncode(rec709To2020 * lin * (80.0 / 10000.0)) + noise / 1023.0;
 		lin = rec2020To709 * pqDecode(pq) * (10000.0 / 80.0);
 	}
 

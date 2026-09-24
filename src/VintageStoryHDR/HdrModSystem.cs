@@ -199,7 +199,8 @@ public sealed class HdrModSystem : ModSystem
             state,
             config.PaperWhiteNits > 0f
                 ? config.PaperWhiteNits.ToString("0", CultureInfo.InvariantCulture) + " nits"
-                : config.EffectivePaperWhiteNits.ToString("0", CultureInfo.InvariantCulture) + " nits (from display)",
+                : config.EffectivePaperWhiteNits.ToString("0", CultureInfo.InvariantCulture)
+                    + (config.DisplaySdrWhiteNits > 0f ? " nits (from display)" : " nits (default; the display reports no SDR white)"),
             config.PeakNits > 0f ? config.PeakNits.ToString("0", CultureInfo.InvariantCulture) + " nits" : "from display",
             config.EmissiveBoost,
             config.HighlightBoost,
