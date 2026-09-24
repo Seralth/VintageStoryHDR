@@ -42,7 +42,12 @@ work, no FPS loss. Works alongside SheyderMod 1.1.3 (both shader patches still a
 Komet v1.2.0-pre.3 (it logs a harmless patch-collision warning on `window_RenderFrame`).
 Peak and full-frame luminance come from the compositor's preferred image description
 (`wp_color_management_v1`): KWin reported 1200 / 900 nits and 604 nits SDR white, i.e. the
-overrides from its display settings rather than the panel's EDID figures. Fractional
+overrides from its display settings rather than the panel's EDID figures. KWin maps the PQ
+default reference white (203 nits) to its SDR white, so the HDR10 output is scaled by
+203 / SDR white to show the nits it encodes; paper white and UI white default to that SDR
+white on Linux, so toggling HDR leaves overall brightness alone. UI colours look very
+slightly less saturated with HDR on, most likely KWin's "SDR gamut wideness" (100% here)
+stretching the SDR path only. Fractional
 display scaling is not supported (falls back to SDR with a message) and has not been tested.
 
 ## Linux: the game on native Wayland
