@@ -32,6 +32,8 @@ internal sealed class DxgiOutput : IHdrOutput
 
     public bool EncodesPq => false;
 
+    public float ContentScale => 1f;
+
     internal static DxgiOutput Create(nint parentWindow, int width, int height)
     {
         DxgiOutput output = new(parentWindow);

@@ -46,6 +46,7 @@ uniform float paperWhite; // in scRGB units, 1.0 = 80 nits
 uniform float peak;       // in scRGB units
 uniform int ditherFrame;  // < 0 disables
 uniform int encodePq;     // 1: write PQ Rec.2020 (HDR10) instead of scRGB
+uniform float pqScale;    // encoded nits per displayed nit, for compositors that rescale PQ
 in vec2 uv;
 out vec4 outColor;
 
@@ -102,11 +103,13 @@ void main() {
 			hash(seed + 59.0) + hash(seed + 71.0)) - 1.0;
 	}
 
-	vec3 pq = pqEncode(rec709To2020 * lin * (80.0 / 10000.0)) + noise / 1023.0;
 	if (encodePq != 0) {
-		outColor = vec4(clamp(pq, 0.0, 1.0), 1.0);
+		vec3 encodedPq = pqEncode(rec709To2020 * lin * pqScale * (80.0 / 10000.0)) + noise / 1023.0;
+		outColor = vec4(clamp(encodedPq, 0.0, 1.0), 1.0);
 		return;
 	}
+
+	vec3 pq = pqEncode(rec709To2020 * lin * (80.0 / 10000.0)) + noise / 1023.0;
 
 	if (ditherFrame >= 0) {
 		lin = rec2020To709 * pqDecode(pq) * (10000.0 / 80.0);
@@ -129,6 +132,7 @@ void main() {
     private int uniformPeak;
     private int uniformDitherFrame;
     private int uniformEncodePq;
+    private int uniformPqScale;
     private int frameCounter;
 
     private HdrPresenter(Func<(int Width, int Height)> clientSize, Func<int, int, IHdrOutput> createOutput)
@@ -209,6 +213,7 @@ void main() {
             uniformPeak = GL.GetUniformLocation(program, "peak");
             uniformDitherFrame = GL.GetUniformLocation(program, "ditherFrame");
             uniformEncodePq = GL.GetUniformLocation(program, "encodePq");
+            uniformPqScale = GL.GetUniformLocation(program, "pqScale");
             GL.ProgramUniform1(program, GL.GetUniformLocation(program, "source"), 0);
             vertexArray = GL.GenVertexArray();
 
@@ -323,6 +328,7 @@ void main() {
             frameCounter = (frameCounter + 1) & 0xFF;
             GL.Uniform1(uniformDitherFrame, config.Dither ? frameCounter : -1);
             GL.Uniform1(uniformEncodePq, output.EncodesPq ? 1 : 0);
+            GL.Uniform1(uniformPqScale, output.ContentScale);
             GL.BindTexture(TextureTarget.Texture2D, redirectTexture);
             GL.BindVertexArray(vertexArray);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);

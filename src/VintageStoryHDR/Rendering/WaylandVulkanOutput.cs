@@ -62,6 +62,9 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
     /// <summary>How long a present may wait for a swapchain image before the frame is skipped (minimised or hidden window).</summary>
     private const ulong AcquireTimeoutNs = 100_000_000;
 
+    /// <summary>Reference white of PQ content when the image description does not set one (color-management-v1).</summary>
+    private const float PqReferenceWhiteNits = 203f;
+
     private static readonly string[] RequiredInstanceExtensions = { "VK_KHR_surface", "VK_KHR_wayland_surface", "VK_EXT_swapchain_colorspace" };
     private static readonly string[] RequiredDeviceExtensions = { "VK_KHR_swapchain", "VK_KHR_external_memory_fd", "VK_KHR_external_semaphore_fd" };
 
@@ -133,6 +136,13 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
     public bool TearingSupported { get; private set; }
 
     public bool EncodesPq => true;
+
+    /// <summary>
+    /// The HDR10 image description the Vulkan driver gives the subsurface carries the PQ
+    /// default reference white, 203 cd/m², and the compositor maps that to the display's SDR
+    /// white. Scaling by 203 / SDR white makes the encoded nits the displayed nits.
+    /// </summary>
+    public float ContentScale { get; private set; } = 1f;
 
     /// <summary>Whether the game is running on GLFW's Wayland backend, the only Linux setup this output supports.</summary>
     internal static bool GameIsOnWayland()
@@ -217,15 +227,18 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
         if (luminance is { MaxNits: > 0f } l)
         {
             Display = new DisplayInfo(HdrEnabled: true, l.MinNits, l.MaxNits, l.MaxFrameAverageNits);
+            ContentScale = l.ReferenceNits > 0f ? PqReferenceWhiteNits / l.ReferenceNits : 1f;
             HdrRuntime.Log?.Notification(
-                "Compositor reports the display at {0:0} nits peak, {1:0} nits SDR white, {2:0.####} nits black.",
+                "Compositor reports the display at {0:0} nits peak, {1:0} nits SDR white, {2:0.####} nits black; HDR10 output scaled by {3:0.###} to match.",
                 l.MaxNits,
                 l.ReferenceNits,
-                l.MinNits);
+                l.MinNits,
+                l.ReferenceNits > 0f ? PqReferenceWhiteNits / l.ReferenceNits : 1f);
         }
         else
         {
             Display = new DisplayInfo(HdrEnabled: true, MinNits: 0f, MaxNits: 0f, MaxFullFrameNits: 0f);
+            ContentScale = 1f;
         }
     }
 
@@ -270,9 +283,10 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
             CreateSwapchain(wanted);
         }
 
-        if (hdrMetadataSupported && peakNits != metadataPeak)
+        float contentPeak = peakNits * ContentScale;
+        if (hdrMetadataSupported && contentPeak != metadataPeak)
         {
-            SetHdrMetadata(peakNits);
+            SetHdrMetadata(contentPeak);
         }
 
         ulong currentFence = fence;

@@ -26,6 +26,13 @@ internal interface IHdrOutput : IDisposable
     /// </summary>
     bool EncodesPq { get; }
 
+    /// <summary>
+    /// What the compositor's processing multiplies encoded luminance by, inverted: the
+    /// presenter scales what it writes by this so the display shows the nits it meant. 1 where
+    /// the signal is shown as encoded.
+    /// </summary>
+    float ContentScale { get; }
+
     /// <summary>Runs <paramref name="action"/> while GL may attach or otherwise use <see cref="Texture"/>, outside of a frame.</summary>
     void WithTexture(Action action);
 
