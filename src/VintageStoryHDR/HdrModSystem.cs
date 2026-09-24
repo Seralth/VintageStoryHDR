@@ -13,7 +13,7 @@ using VintageStoryHDR.Rendering;
 namespace VintageStoryHDR;
 
 /// <summary>
-/// Client-only mod that presents the game in HDR on Windows. See README.md for how the
+/// Client-only mod that presents the game in HDR on Windows, and on Linux under Wayland. See README.md for how the
 /// pipeline fits together and docs/findings.md for the game internals behind it.
 /// </summary>
 public sealed class HdrModSystem : ModSystem
@@ -37,9 +37,11 @@ public sealed class HdrModSystem : ModSystem
         LoadConfig(api);
         RegisterCommand(api);
 
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() && !WaylandVulkanOutput.GameIsOnWayland())
         {
-            HdrRuntime.InactiveReason = "HDR output goes through DXGI, which only exists on Windows.";
+            HdrRuntime.InactiveReason = OperatingSystem.IsLinux()
+                ? "on Linux, HDR output needs the game running on native Wayland, not X11 or XWayland."
+                : "HDR output is only implemented for Windows and for Linux on Wayland.";
             Mod.Logger.Notification("{0} Vanilla presentation left untouched.", HdrRuntime.InactiveReason);
             return;
         }
