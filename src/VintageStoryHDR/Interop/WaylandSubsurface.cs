@@ -37,6 +37,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
     private static uint compositorName;
     private static uint compositorVersion;
     private static uint subcompositorName;
+    private static uint colorManagerName;
 
     private nint queue;
     private nint wrapper;
@@ -45,6 +46,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
     private nint compositor;
     private nint subcompositor;
     private nint subsurface;
+    private DisplayLuminanceFeedback? luminance;
 
     private WaylandSubsurface(nint display)
     {
@@ -90,6 +92,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         ((nint*)listener)[1] = (nint)(delegate* unmanaged[Cdecl]<nint, nint, uint, void>)&OnGlobalRemove;
         compositorName = 0;
         subcompositorName = 0;
+        colorManagerName = 0;
         _ = Native.wl_proxy_add_listener(registry, listener, 0);
         if (Native.wl_display_roundtrip_queue(Display, queue) < 0)
         {
@@ -124,6 +127,24 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         _ = Native.wl_proxy_marshal_array_flags(subsurface, SubsurfaceSetDesync, 0, 1, 0, null);
 
         Resize(logicalWidth, logicalHeight, bufferScale);
+
+        if (colorManagerName != 0)
+        {
+            luminance = new DisplayLuminanceFeedback(Display, queue, registry, colorManagerName, parent);
+        }
+    }
+
+    /// <summary>
+    /// What the compositor says about the display the game window is on, or null if it does not
+    /// implement the colour-management protocol or has not answered yet.
+    /// </summary>
+    internal DisplayLuminance? Luminance => luminance?.Current;
+
+    /// <summary>Processes compositor events. Call once per frame. Returns true when <see cref="Luminance"/> changed.</summary>
+    internal bool Pump()
+    {
+        _ = Native.wl_display_dispatch_queue_pending(Display, queue);
+        return luminance?.Pump() ?? false;
     }
 
     /// <summary>Opaque region and buffer scale for a new size. Both apply with the swapchain's next present.</summary>
@@ -142,6 +163,8 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
 
     public void Dispose()
     {
+        luminance?.Dispose();
+        luminance = null;
         Destroy(ref subsurface, SubsurfaceDestroy);
         nint surface = Surface;
         Destroy(ref surface, SurfaceDestroy);
@@ -244,6 +267,10 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         {
             subcompositorName = name;
         }
+        else if (name8 == "wp_color_manager_v1")
+        {
+            colorManagerName = name;
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -253,7 +280,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
 
     /// <summary><c>union wl_argument</c>.</summary>
     [StructLayout(LayoutKind.Explicit, Size = 8)]
-    private struct Arg
+    internal struct Arg
     {
         [FieldOffset(0)]
         public int Int;
@@ -265,7 +292,7 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
         public nint Object;
     }
 
-    private static partial class Native
+    internal static partial class Native
     {
         internal const string Library = "libwayland-client.so.0";
         internal const uint MarshalFlagDestroy = 1;
@@ -305,5 +332,11 @@ internal sealed unsafe partial class WaylandSubsurface : IDisposable
 
         [LibraryImport(Library)]
         internal static partial void wl_event_queue_destroy(nint queue);
+
+        [LibraryImport(Library)]
+        internal static partial int wl_proxy_add_dispatcher(nint proxy, nint dispatcher, nint dispatcherData, nint data);
+
+        [LibraryImport("libc.so.6")]
+        internal static partial int close(int fd);
     }
 }

@@ -194,7 +194,7 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
         CreateSharedTexture(frameWidth, frameHeight);
         CreateSwapchain(PresentModeFifo);
 
-        Display = new DisplayInfo(HdrEnabled: true, MinNits: 0f, MaxNits: 0f, MaxFullFrameNits: 0f);
+        UpdateDisplay();
 
         // From now on the game's own surface is committed only to show or resize the
         // subsurface, and nothing may wait on it.
@@ -205,6 +205,29 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
     }
 
     public void WithTexture(Action action) => action();
+
+    /// <summary>
+    /// Takes the display's luminances from the compositor's colour-management feedback. A
+    /// compositor without it leaves them at 0, and the presenter falls back to the configured
+    /// or a default peak.
+    /// </summary>
+    private void UpdateDisplay()
+    {
+        DisplayLuminance? luminance = overlay?.Luminance;
+        if (luminance is { MaxNits: > 0f } l)
+        {
+            Display = new DisplayInfo(HdrEnabled: true, l.MinNits, l.MaxNits, l.MaxFrameAverageNits);
+            HdrRuntime.Log?.Notification(
+                "Compositor reports the display at {0:0} nits peak, {1:0} nits SDR white, {2:0.####} nits black.",
+                l.MaxNits,
+                l.ReferenceNits,
+                l.MinNits);
+        }
+        else
+        {
+            Display = new DisplayInfo(HdrEnabled: true, MinNits: 0f, MaxNits: 0f, MaxFullFrameNits: 0f);
+        }
+    }
 
     public void BeginWrite()
     {
@@ -228,6 +251,11 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
 
     public void Present(bool vsync, float peakNits)
     {
+        if (overlay!.Pump())
+        {
+            UpdateDisplay();
+        }
+
         if (!frameWritten)
         {
             return;
