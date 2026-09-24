@@ -165,7 +165,7 @@ public sealed class HdrModSystem : ModSystem
                 break;
             default:
                 return TextCommandResult.Error(
-                    "Usage: .hdr | .hdr on | .hdr off | .hdr paperwhite <nits> | .hdr ui <nits, 0 = paperwhite> | .hdr peak <nits, 0 = display> | " +
+                    "Usage: .hdr | .hdr on | .hdr off | .hdr paperwhite <nits, 0 = display> | .hdr ui <nits, 0 = paperwhite> | .hdr peak <nits, 0 = display> | " +
                     ".hdr emissive <x> | .hdr highlight <x> | .hdr stars <x> | .hdr gamut <0..1> | .hdr gamma <g> | .hdr floatscene|smoothsky|dither <0|1>");
         }
 
@@ -195,9 +195,11 @@ public sealed class HdrModSystem : ModSystem
 
         return string.Format(
             CultureInfo.InvariantCulture,
-            "HDR {0}. paperwhite {1:0} nits, ui {11}, peak {2}, emissive {3:0.##}, highlight {4:0.##}, stars {9:0.##}, gamut {10:0.##}, gamma {5:0.##}, floatscene {6}, smoothsky {7}, dither {8}",
+            "HDR {0}. paperwhite {1}, ui {11}, peak {2}, emissive {3:0.##}, highlight {4:0.##}, stars {9:0.##}, gamut {10:0.##}, gamma {5:0.##}, floatscene {6}, smoothsky {7}, dither {8}",
             state,
-            config.PaperWhiteNits,
+            config.PaperWhiteNits > 0f
+                ? config.PaperWhiteNits.ToString("0", CultureInfo.InvariantCulture) + " nits"
+                : config.EffectivePaperWhiteNits.ToString("0", CultureInfo.InvariantCulture) + " nits (from display)",
             config.PeakNits > 0f ? config.PeakNits.ToString("0", CultureInfo.InvariantCulture) + " nits" : "from display",
             config.EmissiveBoost,
             config.HighlightBoost,

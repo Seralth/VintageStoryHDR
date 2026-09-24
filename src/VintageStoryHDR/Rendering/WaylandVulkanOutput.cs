@@ -226,7 +226,7 @@ internal sealed unsafe class WaylandVulkanOutput : IHdrOutput
         DisplayLuminance? luminance = overlay?.Luminance;
         if (luminance is { MaxNits: > 0f } l)
         {
-            Display = new DisplayInfo(HdrEnabled: true, l.MinNits, l.MaxNits, l.MaxFrameAverageNits);
+            Display = new DisplayInfo(HdrEnabled: true, l.MinNits, l.MaxNits, l.MaxFrameAverageNits, l.ReferenceNits);
             ContentScale = l.ReferenceNits > 0f ? PqReferenceWhiteNits / l.ReferenceNits : 1f;
             HdrRuntime.Log?.Notification(
                 "Compositor reports the display at {0:0} nits peak, {1:0} nits SDR white, {2:0.####} nits black; HDR10 output scaled by {3:0.###} to match.",

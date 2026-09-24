@@ -288,8 +288,9 @@ void main() {
         // Encoded 1.0 in the redirect buffer is GUI white. The scene was already scaled
         // relative to that by the final shader -- if it is patched; if not, scene and GUI
         // cannot be told apart and both sit at the scene's level, as they always did.
-        float whiteNits = HdrRuntime.FinalShaderPatched ? config.EffectiveUiNits : config.PaperWhiteNits;
-        float brightestWhite = Math.Max(whiteNits, config.PaperWhiteNits);
+        config.DisplaySdrWhiteNits = Display.SdrWhiteNits;
+        float whiteNits = HdrRuntime.FinalShaderPatched ? config.EffectiveUiNits : config.EffectivePaperWhiteNits;
+        float brightestWhite = Math.Max(whiteNits, config.EffectivePaperWhiteNits);
 
         float peakNits = config.PeakNits > 0f ? config.PeakNits : Display.MaxNits;
         if (!(peakNits >= brightestWhite))
