@@ -40,7 +40,9 @@ RTX 5080 Laptop, driver 615.71.09, CachyOS, KDE Plasma 6.7.5 (Wayland, HDR on, s
 brighter highlights, finer texture detail, mouse, resize, F11, options menu and minimise all
 work, no FPS loss. Works alongside SheyderMod 1.1.3 (both shader patches still apply) and
 Komet v1.2.0-pre.3 (it logs a harmless patch-collision warning on `window_RenderFrame`).
-The display reports no peak luminance, so `.hdr peak` has to be set by hand. Fractional
+Peak and full-frame luminance come from the compositor's preferred image description
+(`wp_color_management_v1`): KWin reported 1200 / 900 nits and 604 nits SDR white, i.e. the
+overrides from its display settings rather than the panel's EDID figures. Fractional
 display scaling is not supported (falls back to SDR with a message) and has not been tested.
 
 ## Linux: the game on native Wayland
