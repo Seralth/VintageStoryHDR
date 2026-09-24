@@ -50,6 +50,12 @@ slightly less saturated with HDR on, most likely KWin's "SDR gamut wideness" (10
 stretching the SDR path only. Fractional
 display scaling is not supported (falls back to SDR with a message) and has not been tested.
 
+RX 7900 XTX (radeonsi / RADV), Mesa 26.2.3, CachyOS, KDE Plasma (Wayland), game on native
+Wayland, seen through a Moonlight stream of a Hermes-KMS HDR virtual output (1920x1080, KDE
+reporting 800 nits peak / 200 nits SDR white): activates as HDR10 via Vulkan on a Wayland
+subsurface, `.hdr off` / `on` toggles cleanly, no GL errors or fallbacks. Colour accuracy not
+judged -- the stream was too soft for that; the physical display has not been tested yet.
+
 ## Linux: the game on native Wayland
 
 HDR swapchain colour spaces are only offered for Wayland surfaces; an XWayland window gets
